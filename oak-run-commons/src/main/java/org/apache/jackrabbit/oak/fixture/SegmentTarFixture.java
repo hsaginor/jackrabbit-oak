@@ -81,6 +81,9 @@ public class SegmentTarFixture extends OakFixture {
         private String azureContainerName;
         private String azureRootPath;
         
+        private File fileDataStore;
+        private File repository;
+        
         public static SegmentTarFixtureBuilder segmentTarFixtureBuilder(String name, File directory) {
             return new SegmentTarFixtureBuilder(name, directory);
         }
@@ -114,6 +117,16 @@ public class SegmentTarFixture extends OakFixture {
             this.dsCacheSize = dsCacheSize;
             return this;
         }
+        
+        public SegmentTarFixtureBuilder withFileDataStore(File fds) {
+            this.fileDataStore = fds;
+            return this;
+        }
+        
+        public SegmentTarFixtureBuilder withRepository(File repository) {
+            this.repository = repository;
+            return this;
+        }
 
         public SegmentTarFixtureBuilder withAzure(String azureConnectionString, String azureContainerName, String azureRootPath) {
             this.azureConnectionString = azureConnectionString;
@@ -145,6 +158,9 @@ public class SegmentTarFixture extends OakFixture {
     private final String azureRootPath;
 
     private final File parentPath;
+    
+    private File fileDataStore;
+    private File repository;
 
     private FileStore[] stores;
     private BlobStoreFixture[] blobStoreFixtures; 
@@ -167,6 +183,8 @@ public class SegmentTarFixture extends OakFixture {
             boolean shareBlobStore, boolean oneShotRun, boolean secure) {
         super(builder.name);
         this.base = builder.base;
+        this.repository = builder.repository;
+        this.fileDataStore = builder.fileDataStore;
         this.parentPath = new File(base, unique);
 
         this.maxFileSize = builder.maxFileSize;
@@ -187,7 +205,10 @@ public class SegmentTarFixture extends OakFixture {
 
     @Override
     public Oak getOak(int clusterId) throws Exception {
-        FileStoreBuilder fileStoreBuilder = fileStoreBuilder(parentPath)
+        File repo = repository == null ? parentPath : repository;
+        String fdsPath = fileDataStore == null ? parentPath.getAbsolutePath() : fileDataStore.getAbsolutePath();
+        
+        FileStoreBuilder fileStoreBuilder = fileStoreBuilder(repo)
                 .withMaxFileSize(maxFileSize)
                 .withSegmentCacheSize(segmentCacheSize)
                 .withMemoryMapping(memoryMapping);
@@ -203,7 +224,7 @@ public class SegmentTarFixture extends OakFixture {
         if (useBlobStore) {
             FileDataStore fds = new FileDataStore();
             fds.setMinRecordLength(4092);
-            fds.init(parentPath.getAbsolutePath());
+            fds.init(fdsPath);
             BlobStore blobStore = new DataStoreBlobStore(fds);
             
             fileStoreBuilder.withBlobStore(blobStore);

@@ -60,9 +60,12 @@ class ServerCommand implements Command {
         OptionParser parser = new OptionParser();
 
         OptionSpec<Integer> cache = parser.accepts("cache", "cache size (MB)").withRequiredArg().ofType(Integer.class).defaultsTo(100);
+        OptionSpec<Integer> dsCache = parser.accepts("dsCache", "DataStore cache size (MB)").withRequiredArg().ofType(Integer.class).defaultsTo(100);
 
         // tar/h2 specific option
         OptionSpec<File> base = parser.accepts("base", "Base directory").withRequiredArg().ofType(File.class);
+        OptionSpec<File> repository = parser.accepts("repository", "Repository directory").withRequiredArg().ofType(File.class);
+        OptionSpec<File> fds = parser.accepts("fds", "File DataStore directory").withRequiredArg().ofType(File.class);
         OptionSpec<Boolean> mmap = parser.accepts("mmap", "TarMK memory mapping").withOptionalArg().ofType(Boolean.class).defaultsTo("64".equals(System.getProperty("sun.arch.data.model")));
 
         // mongo specific options:
@@ -94,6 +97,7 @@ class ServerCommand implements Command {
         String fix = (arglist.size() <= 1) ? OakFixture.OAK_MEMORY : arglist.get(1);
 
         int cacheSize = cache.value(options);
+        int dsCacheSize = dsCache.value(options);
         List<Integer> cIds = Collections.emptyList();
         if (fix.startsWith(OakFixture.OAK_MEMORY)) {
             if (OakFixture.OAK_MEMORY_NS.equals(fix)) {
@@ -123,6 +127,19 @@ class ServerCommand implements Command {
                 throw new IllegalArgumentException("Required argument base missing.");
             }
             oakFixture = OakFixture.getVanillaSegmentTar(baseFile, 256, cacheSize, mmap.value(options));
+        } else if (fix.equals(OakFixture.OAK_SEGMENT_TAR_DS)) {
+            File baseFile = base.value(options);
+            if (baseFile == null) {
+                throw new IllegalArgumentException("Required argument base missing.");
+            }
+            
+            File repoDir = repository.value(options);
+            File fdsDir = fds.value(options);
+            if(repoDir != null || fdsDir != null) {
+                oakFixture = OakFixture.getSegmentTarWithDataStore(baseFile, repoDir, fdsDir, 256, cacheSize, mmap.value(options), dsCacheSize);
+            } else {
+                oakFixture = OakFixture.getSegmentTarWithDataStore(baseFile, 256, cacheSize, mmap.value(options), dsCacheSize);
+            }
         } else if (fix.equals(OakFixture.OAK_RDB)) {
             oakFixture = OakFixture.getRDB(OakFixture.OAK_RDB, rdbjdbcuri.value(options), rdbjdbcuser.value(options),
                     rdbjdbcpasswd.value(options), rdbjdbctableprefix.value(options), false, cacheSize, -1);
