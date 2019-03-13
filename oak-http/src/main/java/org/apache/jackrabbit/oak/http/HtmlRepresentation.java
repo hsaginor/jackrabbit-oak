@@ -17,6 +17,7 @@
 package org.apache.jackrabbit.oak.http;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URLEncoder;
 
 import javax.servlet.http.HttpServletResponse;
@@ -35,10 +36,13 @@ import org.apache.tika.mime.MediaType;
 import org.apache.tika.sax.XHTMLContentHandler;
 import org.xml.sax.SAXException;
 
+import org.apache.commons.io.IOUtils;
+
 import com.google.common.base.Charsets;
 
 import static org.apache.jackrabbit.oak.api.Type.STRING;
 import static org.apache.jackrabbit.oak.api.Type.STRINGS;
+import static org.apache.jackrabbit.oak.api.Type.BINARY;
 
 class HtmlRepresentation implements Representation {
 
@@ -65,7 +69,18 @@ class HtmlRepresentation implements Representation {
                     xhtml.endElement("ol");
                     xhtml.endElement("dd");
                 } else {
-                    xhtml.element("dd", property.getValue(STRING));
+                    if(BINARY.equals(property.getType())) {
+                        String name = property.getName();
+                        String path = tree.getPath() + "/" + name;
+                        xhtml.startElement("p");
+                        xhtml.startElement("a", "href", response.encodeRedirectURL(
+                                URLEncoder.encode(name, Charsets.UTF_8.name()) + "/"));
+                        xhtml.characters(path);
+                        xhtml.endElement("a");
+                        xhtml.endElement("p");
+                    } else {
+                        xhtml.element("p", property.getValue(STRING));
+                    }
                 }
             }
 
@@ -90,21 +105,34 @@ class HtmlRepresentation implements Representation {
     public void render(PropertyState property, HttpServletResponse response)
             throws IOException {
         try {
-            XHTMLContentHandler xhtml =
-                    startResponse(response, property.getName());
-            xhtml.startDocument();
-
-            if (property.isArray()) {
-                xhtml.startElement("ol");
-                for (String value : property.getValue(STRINGS)) {
-                    xhtml.element("li", value);
+            if(BINARY.equals(property.getType())) {
+                response.setContentType("application/octet-stream");
+         
+                InputStream in = null;
+                try {
+                    in = property.getValue(BINARY).getNewStream();
+                    IOUtils.copy(in, response.getOutputStream());
+                } finally {
+                    IOUtils.closeQuietly(in);
                 }
-                xhtml.endElement("ol");
-            } else {
-                xhtml.element("p", property.getValue(STRING));
+  
+            } else {   
+                XHTMLContentHandler xhtml =
+                        startResponse(response, property.getName());
+                xhtml.startDocument();
+    
+                if (property.isArray()) {
+                    xhtml.startElement("ol");
+                    for (String value : property.getValue(STRINGS)) {
+                        xhtml.element("li", value);
+                    }
+                    xhtml.endElement("ol");
+                } else {
+                    xhtml.element("p", property.getValue(STRING));
+                }
+    
+                xhtml.endDocument();
             }
-
-            xhtml.endDocument();
         } catch (SAXException e) {
             throw new IOException(e);
         }

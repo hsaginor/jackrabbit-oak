@@ -17,6 +17,7 @@
 package org.apache.jackrabbit.oak.http;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
@@ -33,14 +34,20 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+
+import org.apache.commons.io.IOUtils;
 import org.apache.jackrabbit.oak.api.CommitFailedException;
 import org.apache.jackrabbit.oak.api.ContentRepository;
 import org.apache.jackrabbit.oak.api.ContentSession;
+import org.apache.jackrabbit.oak.api.PropertyState;
 import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.api.Tree;
 import org.apache.jackrabbit.oak.commons.PathUtils;
 import org.apache.jackrabbit.util.Base64;
 import org.apache.tika.mime.MediaType;
+
+import static org.apache.jackrabbit.oak.api.Type.BINARY;
+import static org.apache.jackrabbit.oak.api.Type.STRING;
 
 public class OakServlet extends HttpServlet {
 
@@ -127,9 +134,37 @@ public class OakServlet extends HttpServlet {
             Tree tree = (Tree) request.getAttribute("tree");
             representation.render(tree, response);
         } else {
-            // There was an extra path component that didn't match
-            // any existing nodes, so for now we just send a 404 response.
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            Tree tree = (Tree) request.getAttribute("tree");
+            String name = path;
+            if(name.startsWith("/")) {
+                name = name.substring(1);
+            }
+            
+            if(tree.hasProperty(name)) {
+                
+                PropertyState property = tree.getProperty(name);
+                if(BINARY.equals(property.getType()) && tree.hasProperty("jcr:mimeType")) {
+                    // Binary property with a known mime type is requested.
+                    // Just write it back to response
+                    String mime = tree.getProperty("jcr:mimeType").getValue(STRING);
+                    response.setContentType(mime);
+                    InputStream in = null;
+                    try {
+                        in = property.getValue(BINARY).getNewStream();
+                        IOUtils.copy(in, response.getOutputStream());
+                    } finally {
+                        IOUtils.closeQuietly(in);
+                    }
+                  
+                } else { 
+                    representation.render(property, response);
+                }
+                
+            } else {
+                // There was an extra path component that didn't match
+                // any existing nodes or properties, so we just send a 404 response.
+                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            }
         }
     }
 
