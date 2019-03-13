@@ -224,6 +224,12 @@ public class SegmentTarFixture extends OakFixture {
         if (useBlobStore) {
             FileDataStore fds = new FileDataStore();
             fds.setMinRecordLength(4092);
+            
+            if(fdsPath.endsWith("/repository/datastore")) {
+                // In case a path to existing datastore is specified this bit is added by init method.
+                fdsPath = fdsPath.substring(0, fdsPath.length() - "/repository/datastore".length());
+            }
+            
             fds.init(fdsPath);
             BlobStore blobStore = new DataStoreBlobStore(fds);
             
