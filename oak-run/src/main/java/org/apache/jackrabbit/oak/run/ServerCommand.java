@@ -65,7 +65,7 @@ class ServerCommand implements Command {
         // tar/h2 specific option
         OptionSpec<File> base = parser.accepts("base", "Base directory").withRequiredArg().ofType(File.class);
         OptionSpec<File> repository = parser.accepts("repository", "Repository directory").withRequiredArg().ofType(File.class);
-        OptionSpec<File> fds = parser.accepts("fds", "File DataStore directory").withRequiredArg().ofType(File.class);
+        OptionSpec<File> fds = parser.accepts("fds-path", "File DataStore directory").withRequiredArg().ofType(File.class);
         OptionSpec<Boolean> mmap = parser.accepts("mmap", "TarMK memory mapping").withOptionalArg().ofType(Boolean.class).defaultsTo("64".equals(System.getProperty("sun.arch.data.model")));
 
         // mongo specific options:
