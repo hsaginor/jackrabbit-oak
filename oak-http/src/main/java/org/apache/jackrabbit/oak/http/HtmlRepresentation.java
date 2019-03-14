@@ -18,6 +18,7 @@ package org.apache.jackrabbit.oak.http;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 
 import javax.servlet.http.HttpServletResponse;
@@ -74,7 +75,7 @@ class HtmlRepresentation implements Representation {
                         String path = tree.getPath() + "/" + name;
                         xhtml.startElement("p");
                         xhtml.startElement("a", "href", response.encodeRedirectURL(
-                                URLEncoder.encode(name, Charsets.UTF_8.name()) + "/"));
+                                escapePath(path)));
                         xhtml.characters(path);
                         xhtml.endElement("a");
                         xhtml.endElement("p");
@@ -86,11 +87,12 @@ class HtmlRepresentation implements Representation {
 
             for (Tree child : tree.getChildren()) {
                 String name = child.getName();
+                String path = child.getPath();
                 xhtml.element("dt", name);
                 xhtml.startElement("dd");
                 xhtml.startElement("a", "href", response.encodeRedirectURL(
-                        URLEncoder.encode(name, Charsets.UTF_8.name()) + "/"));
-                xhtml.characters(child.getPath());
+                        escapePath(path)));
+                xhtml.characters(path);
                 xhtml.endElement("a");
                 xhtml.endElement("dd");
             }
@@ -159,6 +161,18 @@ class HtmlRepresentation implements Representation {
         } catch (TransformerConfigurationException e) {
             throw new IOException(e);
         }
+    }
+    
+    private String escapePath(String path) throws UnsupportedEncodingException {
+       String pathParts[] = path.split("/");
+       StringBuilder sb = new StringBuilder();
+       
+       for(String part : pathParts) {
+           if(part.length()>0)
+               sb.append('/').append(URLEncoder.encode(part, Charsets.UTF_8.name()));
+       }
+       
+       return sb.toString();
     }
 
 }
