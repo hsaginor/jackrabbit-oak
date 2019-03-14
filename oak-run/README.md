@@ -353,6 +353,8 @@ Depending on the fixture the following options are available:
     --db <name>            - MongoDB database (default is a generated name)
     --clusterIds           - Cluster Ids for the Mongo setup: a comma separated list of integers
     --base <file>          - Tar: Path to the base file
+    --fds-path             - Tar-DS: Path to existing DataStore directory
+    --repository			   - Tar-DS: Path to existing segmentstore
     --mmap <64bit?>        - TarMK memory mapping (the default on 64 bit JVMs)
     --rdbjdbcuri           - JDBC URL for RDB persistence
     --rdbjdbcuser          - JDBC username (defaults to "")
