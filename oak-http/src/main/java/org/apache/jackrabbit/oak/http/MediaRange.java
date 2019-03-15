@@ -48,7 +48,15 @@ public class MediaRange {
             }
         }
 
-        return new MediaRange(type, 1.0);
+        // q for more specific media types should be higher by default
+        double defaultQ = 3.0;
+        if("*/*".equals(type.getType())) {
+            defaultQ = 1.0;
+        } else if("*".equals(type.getSubtype())) {
+            defaultQ = 2.0;
+        }
+        
+        return new MediaRange(type, defaultQ);
     }
 
     public MediaRange(MediaType type, double q) {
