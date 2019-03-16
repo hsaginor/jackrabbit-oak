@@ -36,12 +36,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.jackrabbit.JcrConstants;
 import org.apache.jackrabbit.oak.api.CommitFailedException;
 import org.apache.jackrabbit.oak.api.ContentRepository;
 import org.apache.jackrabbit.oak.api.ContentSession;
 import org.apache.jackrabbit.oak.api.PropertyState;
 import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.api.Tree;
+import org.apache.jackrabbit.oak.api.Type;
 import org.apache.jackrabbit.oak.commons.PathUtils;
 import org.apache.jackrabbit.util.Base64;
 import org.apache.tika.mime.MediaType;
@@ -228,10 +230,18 @@ public class OakServlet extends HttpServlet {
                 } else if (value.isBigDecimal()) {
                     tree.setProperty(name, value.decimalValue());
                 } else {
-                    tree.setProperty(name, value.asText());
+                    tree.setProperty(name, value.asText(), getValidPropertyType(name));
                 }
             }
         }
+    }
+    
+    private static Type getValidPropertyType(String name) {
+        if(JcrConstants.JCR_PRIMARYTYPE.equals(name)) {
+            return Type.NAME;
+        }
+        
+        return Type.STRING;
     }
 
     @Override
