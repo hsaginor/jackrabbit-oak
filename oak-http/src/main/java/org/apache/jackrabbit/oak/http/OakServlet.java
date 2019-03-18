@@ -16,6 +16,11 @@
  */
 package org.apache.jackrabbit.oak.http;
 
+import static org.apache.jackrabbit.oak.api.Type.BINARY;
+import static org.apache.jackrabbit.oak.api.Type.STRING;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
@@ -30,11 +35,11 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.smile.SmileFactory;
-
+import org.apache.commons.fileupload.FileItemIterator;
+import org.apache.commons.fileupload.FileItemStream;
+import org.apache.commons.fileupload.FileUploadException;
+import org.apache.commons.fileupload.servlet.ServletFileUpload;
+import org.apache.commons.fileupload.util.Streams;
 import org.apache.commons.io.IOUtils;
 import org.apache.jackrabbit.JcrConstants;
 import org.apache.jackrabbit.oak.api.CommitFailedException;
@@ -45,11 +50,17 @@ import org.apache.jackrabbit.oak.api.Root;
 import org.apache.jackrabbit.oak.api.Tree;
 import org.apache.jackrabbit.oak.api.Type;
 import org.apache.jackrabbit.oak.commons.PathUtils;
+import org.apache.jackrabbit.oak.commons.UUIDUtils;
 import org.apache.jackrabbit.util.Base64;
+import org.apache.tika.Tika;
 import org.apache.tika.mime.MediaType;
 
-import static org.apache.jackrabbit.oak.api.Type.BINARY;
-import static org.apache.jackrabbit.oak.api.Type.STRING;
+import com.fasterxml.jackson.core.JsonEncoding;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 
 public class OakServlet extends HttpServlet {
 
@@ -58,6 +69,8 @@ public class OakServlet extends HttpServlet {
 
     private static final MediaType SMILE =
             MediaType.parse("application/x-jackson-smile");
+    
+    private static final Tika TIKA = new Tika();
 
     private static final Representation[] REPRESENTATIONS = {
         new HtmlRepresentation(),
@@ -178,15 +191,25 @@ public class OakServlet extends HttpServlet {
             Root root = (Root) request.getAttribute("root");
             Tree tree = (Tree) request.getAttribute("tree");
             String path = (String) request.getAttribute("path");
+            boolean postProcessed = false;
 
             for (String name : PathUtils.elements(path)) {
                 tree = tree.addChild(name);
             }
-
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode node = mapper.readTree(request.getInputStream());
-            if (node.isObject()) {
-                post(node, tree);
+            
+            if(ServletFileUpload.isMultipartContent(request)) {
+                doUpload(request, response, tree);
+                postProcessed = true;
+            } else {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode node = mapper.readTree(request.getInputStream());
+                if (node != null && node.isObject()) {
+                    post(node, tree);
+                    postProcessed = true;
+                } 
+            }
+            
+            if(postProcessed) {
                 root.commit();
                 request.setAttribute("path", "");
                 request.setAttribute("tree", tree);
@@ -223,6 +246,8 @@ public class OakServlet extends HttpServlet {
                     tree.removeProperty(name);
                 } else if (value.isBoolean()) {
                     tree.setProperty(name, value.asBoolean());
+                } else if (value.isInt()) {
+                    tree.setProperty(name, value.asInt());
                 } else if (value.isLong()) {
                     tree.setProperty(name, value.asLong());
                 } else if (value.isDouble()) {
@@ -234,6 +259,50 @@ public class OakServlet extends HttpServlet {
                 }
             }
         }
+    }
+    
+    private void doUpload(HttpServletRequest request, HttpServletResponse response, Tree tree)
+            throws ServletException, IOException {
+        ServletFileUpload upload = new ServletFileUpload();
+        Root root = (Root) request.getAttribute("root");
+        
+        try {
+            FileItemIterator iter = upload.getItemIterator(request);
+            Tree parent = tree;
+            
+            PostRequestFieldsMapper fieldsMapper = new PostRequestFieldsMapper();
+            while(iter.hasNext()) {
+                final FileItemStream item = iter.next();
+                String name = item.getFieldName();
+                String itemName = item.getName();
+                InputStream stream = item.openStream();
+                
+                if(item.isFormField()) {
+                    String value = Streams.asString(stream);
+                    fieldsMapper.writeField(name, value);
+                } else {
+                    Tree child = parent.addChild(itemName);
+                    child.setProperty(JcrConstants.JCR_PRIMARYTYPE, JcrConstants.NT_FILE, Type.NAME);
+                    Tree content = child.addChild(JcrConstants.JCR_CONTENT);
+                    content.setProperty(JcrConstants.JCR_PRIMARYTYPE, JcrConstants.NT_RESOURCE, Type.NAME);
+                    content.setProperty(JcrConstants.JCR_DATA, root.createBlob(stream), Type.BINARY);
+                    content.setProperty(JcrConstants.JCR_UUID, UUIDUtils.generateUUID(content.getPath()));
+                   
+                    String detectedMimeType = TIKA.detect(itemName);
+                    if(detectedMimeType != null && detectedMimeType.length() > 0) {
+                        content.setProperty(JcrConstants.JCR_MIMETYPE, detectedMimeType, Type.STRING);
+                    }
+                }
+            }
+            
+            JsonNode node = fieldsMapper.toJsonNode(); 
+            if (node != null && node.isObject()) {
+                post(node, tree);
+            }
+            
+        } catch (FileUploadException e) {
+            throw new ServletException(e);
+        } 
     }
     
     private static Type getValidPropertyType(String name) {
