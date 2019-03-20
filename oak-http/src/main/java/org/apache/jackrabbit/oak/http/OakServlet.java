@@ -19,8 +19,6 @@ package org.apache.jackrabbit.oak.http;
 import static org.apache.jackrabbit.oak.api.Type.BINARY;
 import static org.apache.jackrabbit.oak.api.Type.STRING;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
@@ -28,7 +26,9 @@ import java.util.Map.Entry;
 
 import javax.jcr.Credentials;
 import javax.jcr.NoSuchWorkspaceException;
+import javax.jcr.RepositoryException;
 import javax.jcr.SimpleCredentials;
+import javax.jcr.nodetype.PropertyDefinition;
 import javax.security.auth.login.LoginException;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -51,13 +51,14 @@ import org.apache.jackrabbit.oak.api.Tree;
 import org.apache.jackrabbit.oak.api.Type;
 import org.apache.jackrabbit.oak.commons.PathUtils;
 import org.apache.jackrabbit.oak.commons.UUIDUtils;
+import org.apache.jackrabbit.oak.namepath.NamePathMapper;
+import org.apache.jackrabbit.oak.plugins.nodetype.ReadOnlyNodeTypeManager;
+import org.apache.jackrabbit.oak.spi.nodetype.EffectiveNodeType;
 import org.apache.jackrabbit.util.Base64;
 import org.apache.tika.Tika;
 import org.apache.tika.mime.MediaType;
 
-import com.fasterxml.jackson.core.JsonEncoding;
 import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
@@ -165,7 +166,10 @@ public class OakServlet extends HttpServlet {
                     response.setContentType(mime);
                     InputStream in = null;
                     try {
-                        in = property.getValue(BINARY).getNewStream();
+                        org.apache.jackrabbit.oak.api.Blob value = property.getValue(BINARY);
+                        String ref = value.getReference();
+                        System.out.println("Blob reference = " + ref);
+                        in = value.getNewStream();
                         IOUtils.copy(in, response.getOutputStream());
                     } finally {
                         IOUtils.closeQuietly(in);
@@ -204,7 +208,7 @@ public class OakServlet extends HttpServlet {
                 ObjectMapper mapper = new ObjectMapper();
                 JsonNode node = mapper.readTree(request.getInputStream());
                 if (node != null && node.isObject()) {
-                    post(node, tree);
+                    post(node, tree, root);
                     postProcessed = true;
                 } 
             }
@@ -219,10 +223,12 @@ public class OakServlet extends HttpServlet {
             }
         } catch (CommitFailedException e) {
             throw new ServletException(e);
+        } catch (RepositoryException e) {
+            throw new ServletException(e);
         }
     }
 
-    private static void post(JsonNode node, Tree tree) {
+    private void post(JsonNode node, Tree tree, Root root) throws IllegalArgumentException, RepositoryException {
         Iterator<Entry<String, JsonNode>> iterator = node.fields();
         while (iterator.hasNext()) {
             Entry<String, JsonNode> entry = iterator.next();
@@ -236,7 +242,7 @@ public class OakServlet extends HttpServlet {
                 if (!child.exists()) {
                     child = tree.addChild(name);
                 }
-                post(value, child);
+                post(value, child, root);
             } else {
                 Tree child = tree.getChild(name);
                 if (child.exists()) {
@@ -255,14 +261,14 @@ public class OakServlet extends HttpServlet {
                 } else if (value.isBigDecimal()) {
                     tree.setProperty(name, value.decimalValue());
                 } else {
-                    tree.setProperty(name, value.asText(), getValidPropertyType(name));
+                    tree.setProperty(name, value.asText(), getValidPropertyType(root, tree, name));
                 }
             }
         }
     }
     
     private void doUpload(HttpServletRequest request, HttpServletResponse response, Tree tree)
-            throws ServletException, IOException {
+            throws ServletException, IOException, IllegalArgumentException, RepositoryException {
         ServletFileUpload upload = new ServletFileUpload();
         Root root = (Root) request.getAttribute("root");
         
@@ -297,7 +303,7 @@ public class OakServlet extends HttpServlet {
             
             JsonNode node = fieldsMapper.toJsonNode(); 
             if (node != null && node.isObject()) {
-                post(node, tree);
+                post(node, tree, root);
             }
             
         } catch (FileUploadException e) {
@@ -305,9 +311,24 @@ public class OakServlet extends HttpServlet {
         } 
     }
     
-    private static Type getValidPropertyType(String name) {
-        if(JcrConstants.JCR_PRIMARYTYPE.equals(name)) {
-            return Type.NAME;
+    private Type getValidPropertyType(Root root, Tree tree, String name) throws RepositoryException {
+        ReadOnlyNodeTypeManager ntm = ReadOnlyNodeTypeManager.getInstance(root, NamePathMapper.DEFAULT);
+        
+        EffectiveNodeType ent = null;
+        if(tree.hasProperty(JcrConstants.JCR_PRIMARYTYPE)) {
+            ent = ntm.getEffectiveNodeType(tree);
+        } else {
+            // Node does not have a primary type. Must be new node. Use parent node.
+            ent = ntm.getEffectiveNodeType(tree.getParent());
+        }
+        
+        Iterator<PropertyDefinition> it = ent.getPropertyDefinitions().iterator();
+        while(it.hasNext()) {
+            PropertyDefinition pd = it.next();
+            if(pd.getName().equals(name)) {
+                Type<?> t = Type.fromTag(pd.getRequiredType(), false);
+                return t;
+            }
         }
         
         return Type.STRING;
