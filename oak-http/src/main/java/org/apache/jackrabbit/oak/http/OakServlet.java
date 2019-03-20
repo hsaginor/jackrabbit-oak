@@ -65,6 +65,11 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 
 public class OakServlet extends HttpServlet {
 
+    /**
+     * 
+     */
+    private static final long serialVersionUID = -5074919710885639904L;
+
     private static final MediaType JSON =
             MediaType.parse("application/json");
 
@@ -313,14 +318,7 @@ public class OakServlet extends HttpServlet {
     
     private Type getValidPropertyType(Root root, Tree tree, String name) throws RepositoryException {
         ReadOnlyNodeTypeManager ntm = ReadOnlyNodeTypeManager.getInstance(root, NamePathMapper.DEFAULT);
-        
-        EffectiveNodeType ent = null;
-        if(tree.hasProperty(JcrConstants.JCR_PRIMARYTYPE)) {
-            ent = ntm.getEffectiveNodeType(tree);
-        } else {
-            // Node does not have a primary type. Must be new node. Use parent node.
-            ent = ntm.getEffectiveNodeType(tree.getParent());
-        }
+        EffectiveNodeType ent = getNodeType(ntm, tree);
         
         Iterator<PropertyDefinition> it = ent.getPropertyDefinitions().iterator();
         while(it.hasNext()) {
@@ -332,6 +330,20 @@ public class OakServlet extends HttpServlet {
         }
         
         return Type.STRING;
+    }
+    
+    private EffectiveNodeType getNodeType(ReadOnlyNodeTypeManager ntm, Tree tree) throws RepositoryException {
+        EffectiveNodeType ent = null;
+        
+        if(tree.hasProperty(JcrConstants.JCR_PRIMARYTYPE)) {
+            ent = ntm.getEffectiveNodeType(tree);
+        } else {
+            // Node does not have a primary type. 
+            // Must be new node with jcr:primaryType not set yet. Use parent node.
+            ent = getNodeType(ntm, tree.getParent());
+        }
+        
+        return ent;
     }
 
     @Override
