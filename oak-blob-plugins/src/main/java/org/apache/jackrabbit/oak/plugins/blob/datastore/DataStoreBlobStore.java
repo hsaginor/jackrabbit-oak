@@ -56,16 +56,20 @@ import org.apache.jackrabbit.core.data.DataIdentifier;
 import org.apache.jackrabbit.core.data.DataRecord;
 import org.apache.jackrabbit.core.data.DataStore;
 import org.apache.jackrabbit.core.data.DataStoreException;
+import org.apache.jackrabbit.core.data.FileDataStore;
 import org.apache.jackrabbit.core.data.MultiDataStoreAware;
 import org.apache.jackrabbit.oak.api.Blob;
 import org.apache.jackrabbit.oak.api.blob.BlobAccessProvider;
 import org.apache.jackrabbit.oak.api.blob.BlobDownloadOptions;
+import org.apache.jackrabbit.oak.api.blob.BlobTempFileProvider;
+import org.apache.jackrabbit.oak.api.blob.BlobTempFileReference;
 import org.apache.jackrabbit.oak.api.blob.BlobUpload;
 import org.apache.jackrabbit.oak.cache.CacheLIRS;
 import org.apache.jackrabbit.oak.cache.CacheStats;
 import org.apache.jackrabbit.oak.commons.StringUtils;
 import org.apache.jackrabbit.oak.plugins.blob.BlobStoreBlob;
 import org.apache.jackrabbit.oak.plugins.blob.BlobTrackingStore;
+import org.apache.jackrabbit.oak.plugins.blob.DefaultBlobTempFileReference;
 import org.apache.jackrabbit.oak.plugins.blob.SharedDataStore;
 import org.apache.jackrabbit.oak.plugins.blob.datastore.directaccess.DataRecordAccessProvider;
 import org.apache.jackrabbit.oak.plugins.blob.datastore.directaccess.DataRecordUploadException;
@@ -88,7 +92,7 @@ import org.slf4j.LoggerFactory;
  */
 public class DataStoreBlobStore
     implements DataStore, BlobStore, GarbageCollectableBlobStore, BlobTrackingStore, TypedDataStore,
-        BlobAccessProvider {
+        BlobAccessProvider, BlobTempFileProvider {
     private final Logger log = LoggerFactory.getLogger(getClass());
 
     protected final DataStore delegate;
@@ -813,5 +817,14 @@ public class DataStoreBlobStore
         static BlobId of(DataRecord dr) {
             return new BlobId(dr);
         }
+    }
+
+    @Override
+    public BlobTempFileReference getTempFileReference(String blobId) {
+        if(delegate instanceof FileDataStore) {
+            return new FileDSBlobTempFileReference((FileDataStore)delegate, blobId);
+        }
+        
+        return new DefaultBlobTempFileReference();
     }
 }
