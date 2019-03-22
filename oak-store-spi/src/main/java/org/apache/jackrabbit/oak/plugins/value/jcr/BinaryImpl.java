@@ -30,6 +30,8 @@ import org.apache.jackrabbit.api.ReferenceBinary;
 import org.apache.jackrabbit.api.binary.BinaryDownload;
 import org.apache.jackrabbit.api.binary.BinaryDownloadOptions;
 import org.apache.jackrabbit.oak.api.Blob;
+import org.apache.jackrabbit.oak.api.blob.FileReferencable;
+import org.apache.jackrabbit.oak.api.blob.TempFileReference;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -39,7 +41,7 @@ import org.slf4j.LoggerFactory;
 /**
  * TODO document
  */
-class BinaryImpl implements ReferenceBinary, BinaryDownload {
+class BinaryImpl implements ReferenceBinary, BinaryDownload, FileReferencable {
     private static final Logger LOG = LoggerFactory.getLogger(BinaryImpl.class);
 
     private final ValueImpl value;
@@ -108,6 +110,18 @@ class BinaryImpl implements ReferenceBinary, BinaryDownload {
         }
         return null;
     }
+    
+   //---------------------------------------------------< FileReferencable >--
+    
+    @Override
+    public TempFileReference getTempFileReference() throws RepositoryException {
+        Blob blob = getBinaryValue().getBlob();
+        if(blob instanceof FileReferencable) {
+            return ((FileReferencable) blob).getTempFileReference();
+        }
+        
+        return null;
+    }
 
     //---------------------------------------------------< ReferenceBinary >--
 
@@ -139,4 +153,5 @@ class BinaryImpl implements ReferenceBinary, BinaryDownload {
     public String toString() {
         return toStringHelper(this).addValue(value).toString();
     }
+
 }
