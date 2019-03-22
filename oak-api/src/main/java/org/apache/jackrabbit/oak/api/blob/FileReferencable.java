@@ -24,7 +24,7 @@ package org.apache.jackrabbit.oak.api.blob;
  * @author hsaginor
  *
  */
-public interface FileReferencableBlob {
+public interface FileReferencable {
 
     /**
      * Provides temporary file access to the binary trough BlobTempFileReference interface. 
@@ -32,6 +32,6 @@ public interface FileReferencableBlob {
      * 
      * @return
      */
-    BlobTempFileReference getTempFileReference();
+    TempFileReference getTempFileReference();
     
 }

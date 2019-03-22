@@ -8,9 +8,9 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 
 import org.apache.jackrabbit.core.data.FileDataStore;
-import org.apache.jackrabbit.oak.api.blob.BlobTempFileReference;
+import org.apache.jackrabbit.oak.api.blob.TempFileReference;
 
-public class FileDSBlobTempFileReference implements BlobTempFileReference {
+public class FileDSBlobTempFileReference implements TempFileReference {
 
     private FileDataStore store;
     private String blobId;

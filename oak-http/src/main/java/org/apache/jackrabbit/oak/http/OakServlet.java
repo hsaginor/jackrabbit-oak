@@ -170,12 +170,12 @@ public class OakServlet extends HttpServlet {
                     String mime = tree.getProperty("jcr:mimeType").getValue(STRING);
                     response.setContentType(mime);
                     InputStream in = null;
-                    org.apache.jackrabbit.oak.api.blob.BlobTempFileReference fileRef = null;
+                    org.apache.jackrabbit.oak.api.blob.TempFileReference fileRef = null;
                     try {
                         org.apache.jackrabbit.oak.api.Blob value = property.getValue(BINARY);
-                        if(value instanceof org.apache.jackrabbit.oak.api.blob.FileReferencableBlob) {
+                        if(value instanceof org.apache.jackrabbit.oak.api.blob.FileReferencable) {
                             fileRef 
-                                = ((org.apache.jackrabbit.oak.api.blob.FileReferencableBlob) value).getTempFileReference();
+                                = ((org.apache.jackrabbit.oak.api.blob.FileReferencable) value).getTempFileReference();
                             if(fileRef !=  null) {
                                java.io.File f = fileRef.getTempFile(null, null);
                                System.out.println("Spooling from file " + f.getAbsolutePath());

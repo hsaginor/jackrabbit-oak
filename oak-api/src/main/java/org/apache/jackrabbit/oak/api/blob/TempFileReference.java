@@ -27,7 +27,7 @@ import java.io.IOException;
  * @author hsaginor
  *
  */
-public interface BlobTempFileReference {
+public interface TempFileReference {
 
     /**
      * 

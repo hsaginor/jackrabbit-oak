@@ -1,6 +1,6 @@
 package org.apache.jackrabbit.oak.api.blob;
 
-public interface BlobTempFileProvider {
+public interface TempFileReferenceProvider {
     
     /**
      * Provides temporary file access to the binary trough BlobTempFileReference interface. 
@@ -8,5 +8,5 @@ public interface BlobTempFileProvider {
      * 
      * @return
      */
-    BlobTempFileReference getTempFileReference(String blobId);
+    TempFileReference getTempFileReference(String blobId);
 }

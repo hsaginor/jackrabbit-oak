@@ -61,8 +61,8 @@ import org.apache.jackrabbit.core.data.MultiDataStoreAware;
 import org.apache.jackrabbit.oak.api.Blob;
 import org.apache.jackrabbit.oak.api.blob.BlobAccessProvider;
 import org.apache.jackrabbit.oak.api.blob.BlobDownloadOptions;
-import org.apache.jackrabbit.oak.api.blob.BlobTempFileProvider;
-import org.apache.jackrabbit.oak.api.blob.BlobTempFileReference;
+import org.apache.jackrabbit.oak.api.blob.TempFileReferenceProvider;
+import org.apache.jackrabbit.oak.api.blob.TempFileReference;
 import org.apache.jackrabbit.oak.api.blob.BlobUpload;
 import org.apache.jackrabbit.oak.cache.CacheLIRS;
 import org.apache.jackrabbit.oak.cache.CacheStats;
@@ -92,7 +92,7 @@ import org.slf4j.LoggerFactory;
  */
 public class DataStoreBlobStore
     implements DataStore, BlobStore, GarbageCollectableBlobStore, BlobTrackingStore, TypedDataStore,
-        BlobAccessProvider, BlobTempFileProvider {
+        BlobAccessProvider, TempFileReferenceProvider {
     private final Logger log = LoggerFactory.getLogger(getClass());
 
     protected final DataStore delegate;
@@ -820,7 +820,7 @@ public class DataStoreBlobStore
     }
 
     @Override
-    public BlobTempFileReference getTempFileReference(String blobId) {
+    public TempFileReference getTempFileReference(String blobId) {
         if(delegate instanceof FileDataStore) {
             return new FileDSBlobTempFileReference((FileDataStore)delegate, blobId);
         }
