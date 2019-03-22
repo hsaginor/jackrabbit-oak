@@ -30,6 +30,9 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.jackrabbit.oak.api.Blob;
+import org.apache.jackrabbit.oak.api.blob.BlobTempFileProvider;
+import org.apache.jackrabbit.oak.api.blob.BlobTempFileReference;
+import org.apache.jackrabbit.oak.api.blob.FileReferencableBlob;
 import org.apache.jackrabbit.oak.plugins.blob.BlobStoreBlob;
 import org.apache.jackrabbit.oak.plugins.memory.AbstractBlob;
 import org.apache.jackrabbit.oak.spi.blob.BlobStore;
@@ -39,7 +42,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A BLOB (stream of bytes). This is a record of type "VALUE".
  */
-public class SegmentBlob extends Record implements Blob {
+public class SegmentBlob extends Record implements Blob, FileReferencableBlob {
 
     @Nullable
     private final BlobStore blobStore;
@@ -255,6 +258,15 @@ public class SegmentBlob extends Record implements Blob {
         }
 
         return length;
+    }
+
+    @Override
+    public BlobTempFileReference getTempFileReference() {
+        if(blobStore instanceof BlobTempFileProvider) {
+            String blobId = getBlobId();
+            return ((BlobTempFileProvider) blobStore).getTempFileReference(blobId);
+        }
+        return null;
     }
 
 }

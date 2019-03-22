@@ -26,7 +26,7 @@ public class FileDSBlobTempFileReference implements BlobTempFileReference {
         if(tempFile == null) {
             String blobPath = getBlobPath();
             Path source = Paths.get(blobPath, new String[] {});
-            Path target = Files.createTempFile(prefixHint, suffixHint, null);
+            Path target = Files.createTempFile(prefixHint, suffixHint);
             target = Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
             tempFile = target.toFile();
             tempFile.deleteOnExit();
@@ -46,7 +46,7 @@ public class FileDSBlobTempFileReference implements BlobTempFileReference {
         path.append(blobId.substring(0, 2)).append(File.separator);
         path.append(blobId.substring(2, 4)).append(File.separator);
         path.append(blobId.substring(4, 6)).append(File.separator);
-        path.append(blobId);
+        path.append(blobId.substring(0, blobId.indexOf('#')));
         return path.toString();
     }
 
