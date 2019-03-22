@@ -185,6 +185,8 @@ public class OakServlet extends HttpServlet {
                             in = value.getNewStream();
                         }
                         IOUtils.copy(in, response.getOutputStream());
+                    } catch(RepositoryException e) {
+                      throw new ServletException(e);  
                     } finally {
                         IOUtils.closeQuietly(in);
                         if(fileRef != null) {

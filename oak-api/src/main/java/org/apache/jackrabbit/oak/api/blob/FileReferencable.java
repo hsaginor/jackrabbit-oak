@@ -18,6 +18,8 @@
  */
 package org.apache.jackrabbit.oak.api.blob;
 
+import javax.jcr.RepositoryException;
+
 /**
  * Represents blob which can be accessed as a File.
  * 
@@ -32,6 +34,6 @@ public interface FileReferencable {
      * 
      * @return
      */
-    TempFileReference getTempFileReference();
+    TempFileReference getTempFileReference() throws RepositoryException;
     
 }
