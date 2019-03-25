@@ -21,7 +21,7 @@ package org.apache.jackrabbit.oak.api.blob;
 import javax.jcr.RepositoryException;
 
 /**
- * Represents blob which can be accessed as a File.
+ * Represents binary which can be accessed as a File.
  * 
  * @author hsaginor
  *
@@ -29,7 +29,7 @@ import javax.jcr.RepositoryException;
 public interface FileReferencable {
 
     /**
-     * Provides temporary file access to the binary trough BlobTempFileReference interface. 
+     * Provides temporary file access to the binary trough TempFileReference interface. 
      * This method may return null if implementation cannot provide temporary file access.
      * 
      * @return

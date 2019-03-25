@@ -23,16 +23,18 @@ import java.io.IOException;
 
 /**
  * 
- * Represents 
+ * Represents temporary file access to a binary.
+ * 
  * @author hsaginor
  *
  */
 public interface TempFileReference {
 
     /**
+     * Returns File reference.
      * 
-     * @param prefix
-     * @param suffix
+     * @param prefixHint
+     * @param suffixHint
      * @return
      */
     public File getTempFile(String prefixHint, String suffixHint) throws IOException;
