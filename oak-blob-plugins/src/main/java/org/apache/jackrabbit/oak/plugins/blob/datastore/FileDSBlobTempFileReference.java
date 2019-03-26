@@ -19,17 +19,21 @@
 package org.apache.jackrabbit.oak.plugins.blob.datastore;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 
 import org.apache.jackrabbit.core.data.FileDataStore;
 import org.apache.jackrabbit.oak.api.blob.TempFileReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FileDSBlobTempFileReference implements TempFileReference {
 
+    private static final Logger log = LoggerFactory.getLogger(FileDSBlobTempFileReference.class);
+    
     private FileDataStore store;
     private String blobId;
     private File tempFile;
@@ -42,13 +46,29 @@ public class FileDSBlobTempFileReference implements TempFileReference {
     @Override
     public File getTempFile(String prefixHint, String suffixHint) throws IOException {
         if(tempFile == null) {
+            FileOutputStream out = null;
             String blobPath = getBlobPath();
-            Path source = Paths.get(blobPath, new String[] {});
-            Path target = Files.createTempFile(prefixHint, suffixHint);
-            target = Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
-            tempFile = target.toFile();
-            tempFile.deleteOnExit();
+            
+            try {
+                Path source = Paths.get(blobPath, new String[] {});
+                Path target = Files.createTempFile(prefixHint, suffixHint);
+                tempFile = target.toFile();
+                tempFile.deleteOnExit();
+                
+                out = new FileOutputStream(tempFile);
+                Files.copy(source, out);
+            } finally {
+                if(out != null) {
+                    try {
+                        out.close();
+                    } catch (IOException e) {
+                        log.warn("Unable to close file output stream after creating a temp file for blob {}: {}",
+                                new Object[] {blobPath, e.getMessage()});
+                    }
+                }
+            }
         }
+        
         return tempFile;
     }
 
