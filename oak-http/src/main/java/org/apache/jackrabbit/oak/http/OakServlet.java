@@ -165,6 +165,7 @@ public class OakServlet extends HttpServlet {
                 
                 PropertyState property = tree.getProperty(name);
                 if(BINARY.equals(property.getType()) && tree.hasProperty("jcr:mimeType")) {
+                    response.addHeader("Accept-Ranges", "bytes");
                     // Binary property with a known mime type is requested.
                     // Just write it back to response
                     String mime = tree.getProperty("jcr:mimeType").getValue(STRING);
@@ -173,18 +174,32 @@ public class OakServlet extends HttpServlet {
                     org.apache.jackrabbit.oak.api.blob.TempFileReference fileRef = null;
                     try {
                         org.apache.jackrabbit.oak.api.Blob value = property.getValue(BINARY);
-                        if(value instanceof org.apache.jackrabbit.oak.api.blob.FileReferencable) {
-                            fileRef 
-                                = ((org.apache.jackrabbit.oak.api.blob.FileReferencable) value).getTempFileReference();
-                            if(fileRef !=  null) {
-                               java.io.File f = fileRef.getTempFile(null, null);
-                               System.out.println("Spooling from file " + f.getAbsolutePath());
-                               in = new java.io.FileInputStream(f);
-                            }
-                        } else {
-                            in = value.getNewStream();
+                        String rangeHeader = request.getHeader("Range");
+                        BlobRangeResponseHandler rangeResponse = null;
+                        if(rangeHeader != null) {
+                            rangeResponse = new BlobRangeResponseHandler(value, rangeHeader, mime);
                         }
-                        IOUtils.copy(in, response.getOutputStream());
+                        
+                        if(rangeResponse != null && rangeResponse.getCount() > 0) {
+                            rangeResponse.startResponse(response);
+                            while(rangeResponse.hasNext()) {
+                                rangeResponse.writeNextRange(response);
+                            }
+                            rangeResponse.close(response);
+                        } else {
+                            if(value instanceof org.apache.jackrabbit.oak.api.blob.FileReferencable) {
+                                fileRef 
+                                    = ((org.apache.jackrabbit.oak.api.blob.FileReferencable) value).getTempFileReference();
+                                if(fileRef !=  null) {
+                                   java.io.File f = fileRef.getTempFile(null, null);
+                                   System.out.println("Spooling from file " + f.getAbsolutePath());
+                                   in = new java.io.FileInputStream(f);
+                                }
+                            } else {
+                                in = value.getNewStream();
+                            }
+                            IOUtils.copy(in, response.getOutputStream());
+                        }
                     } catch(RepositoryException e) {
                       throw new ServletException(e);  
                     } finally {
