@@ -183,7 +183,7 @@ public class OakServlet extends HttpServlet {
                         if(rangeResponse != null && rangeResponse.getCount() > 0) {
                             rangeResponse.startResponse(response);
                             while(rangeResponse.hasNext()) {
-                                rangeResponse.writeNextRange(response);
+                                    rangeResponse.writeNextRange(response);
                             }
                             rangeResponse.close(response);
                         } else {
@@ -200,7 +200,7 @@ public class OakServlet extends HttpServlet {
                             }
                             IOUtils.copy(in, response.getOutputStream());
                         }
-                    } catch(RepositoryException e) {
+                    } catch(RepositoryException | IOException e) {
                       throw new ServletException(e);  
                     } finally {
                         IOUtils.closeQuietly(in);

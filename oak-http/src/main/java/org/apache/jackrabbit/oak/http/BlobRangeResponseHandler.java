@@ -3,9 +3,6 @@ package org.apache.jackrabbit.oak.http;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Random;
-
-import javax.jcr.RepositoryException;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.IOUtils;
@@ -31,9 +28,13 @@ public class BlobRangeResponseHandler {
     }
     
     private String genBoundary() {
-        byte randBytes[] = new byte[15]; 
-        new Random().nextBytes(randBytes);
-        return new String(randBytes);
+        String chars = "0123456789abcdefghijklmnopqrstuvwxyzABCSDEFGHIJKLMNOPQRSTUVWXYZ";
+        StringBuffer sb = new StringBuffer();
+        for(int i=0; i<15; i++) {
+            char nextChar = chars.charAt((int)(chars.length()*Math.random()));
+            sb.append(nextChar);
+        }
+        return sb.toString();
     }
     
     int getCount() {
@@ -44,7 +45,6 @@ public class BlobRangeResponseHandler {
         response.setStatus(206);
         if(ranges.length > 1) 
             response.setHeader("Content-Type", "multipart/byteranges; boundary="+boundary);
-        response.setHeader("Content-Length", contentLength + "");
     }
     
     InputStream getStream() {
@@ -64,26 +64,38 @@ public class BlobRangeResponseHandler {
         long rangeLength = ranges[currentIndex].length();
         long pos = start;
         long totalBytesRead = 0;
+        long bytesToRead = rangeLength;
         
         try {
             OutputStream out = response.getOutputStream();
-            response.setHeader("Content-Range", "bytes " + start + "-"
+            response.addHeader("Content-Range", "bytes " + start + "-"
                     + end + "/" + blob.length());
             if(this.contentType != null) 
-                response.setHeader("Content-Type", this.contentType);
+                response.addHeader("Content-Type", this.contentType);
             
             int bufSize = 2028l <= rangeLength ? 2028 : (int) rangeLength;
             byte chunk[] = new byte[bufSize];
             
-            if(ranges.length > 1)
-                IOUtils.write("--"+this.boundary, out);
+            if(ranges.length > 1) {
+                if(start>0)
+                    IOUtils.write("\n", out, "UTF-8");
+                IOUtils.write("--"+this.boundary, out, "UTF-8");
+                IOUtils.write("\n", out, "UTF-8");
+                out.flush();
+            }
             
-            while (totalBytesRead < rangeLength) {
-                int bytesRead = read(chunk, pos);
-                IOUtils.write(chunk, out);
+            while (bytesToRead > 0) {
+                if(bytesToRead < bufSize) {
+                    chunk = new byte[(int)bytesToRead];
+                }
                 
+                int bytesRead = read(chunk, pos);
+                out.write(chunk);
+                printDebug(chunk);
+                
+                pos+=bytesRead;
                 totalBytesRead += bytesRead;
-                long bytesToRead = rangeLength - totalBytesRead;
+                bytesToRead = rangeLength - totalBytesRead;
                 if(bytesToRead < bufSize) {
                     chunk = new byte[(int)bytesToRead];
                 }
@@ -96,9 +108,21 @@ public class BlobRangeResponseHandler {
         }
     }
     
+    private void printDebug(byte chunk[]) {
+        StringBuffer sb = new StringBuffer();
+        for(byte b : chunk)
+            sb.append((char)b).append(' ');
+        System.out.println(sb.toString());
+    }
+    
     void close(HttpServletResponse response) throws IOException {
-        if(ranges.length > 1)
-            IOUtils.write("--"+this.boundary, response.getOutputStream());
+        OutputStream out = response.getOutputStream();
+        if(ranges.length > 1) {
+            IOUtils.write("\n", out, "UTF-8");
+            IOUtils.write("--"+this.boundary, out, "UTF-8");
+            IOUtils.write("\n", out, "UTF-8");
+        } 
+        out.flush();
     }
 
     private int read(byte[] b, long position) throws IOException {
@@ -127,11 +151,11 @@ public class BlobRangeResponseHandler {
             if (rangeValue.startsWith("-")) {
                 end = fileLength - 1;
                 start = fileLength - 1
-                        - Long.parseLong(rangeValue.substring("-".length()));
+                        - Long.parseLong(rangeValue.substring("-".length()).trim());
             } else {
                 String[] range = rangeValue.split("-");
-                start = Long.parseLong(range[0]);
-                end = range.length > 1 ? Long.parseLong(range[1])
+                start = Long.parseLong(range[0].trim());
+                end = range.length > 1 ? Long.parseLong(range[1].trim())
                         : fileLength - 1;
             }
             if (end > fileLength - 1) {
