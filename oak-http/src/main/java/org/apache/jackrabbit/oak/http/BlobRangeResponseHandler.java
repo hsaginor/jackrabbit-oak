@@ -91,7 +91,6 @@ public class BlobRangeResponseHandler {
                 
                 int bytesRead = read(chunk, pos);
                 out.write(chunk);
-                printDebug(chunk);
                 
                 pos+=bytesRead;
                 totalBytesRead += bytesRead;
