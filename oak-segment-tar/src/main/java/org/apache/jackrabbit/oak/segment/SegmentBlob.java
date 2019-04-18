@@ -26,12 +26,15 @@ import static org.apache.jackrabbit.oak.segment.Segment.SMALL_LIMIT;
 import static org.apache.jackrabbit.oak.segment.SegmentStream.BLOCK_SIZE;
 
 import java.io.InputStream;
+import java.nio.channels.FileChannel;
+import java.nio.channels.SeekableByteChannel;
 import java.util.List;
 import java.util.Set;
 
 import org.apache.jackrabbit.oak.api.Blob;
 import org.apache.jackrabbit.oak.api.blob.TempFileReferenceProvider;
 import org.apache.jackrabbit.oak.api.blob.TempFileReference;
+import org.apache.jackrabbit.oak.api.blob.ChannelBlob;
 import org.apache.jackrabbit.oak.api.blob.FileReferencable;
 import org.apache.jackrabbit.oak.plugins.blob.BlobStoreBlob;
 import org.apache.jackrabbit.oak.plugins.memory.AbstractBlob;
@@ -42,7 +45,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A BLOB (stream of bytes). This is a record of type "VALUE".
  */
-public class SegmentBlob extends Record implements Blob, FileReferencable {
+public class SegmentBlob extends Record implements Blob, ChannelBlob, FileReferencable {
 
     @Nullable
     private final BlobStore blobStore;
@@ -264,8 +267,22 @@ public class SegmentBlob extends Record implements Blob, FileReferencable {
     public TempFileReference getTempFileReference() {
         if(blobStore instanceof TempFileReferenceProvider) {
             String blobId = getBlobId();
-            return ((TempFileReferenceProvider) blobStore).getTempFileReference(blobId);
+            if(blobId != null) {
+                return ((TempFileReferenceProvider) blobStore).getTempFileReference(blobId);
+            }
         }
+        return null;
+    }
+
+    @Override
+    public SeekableByteChannel createChannel() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public FileChannel createFileChannel() {
+        // TODO Auto-generated method stub
         return null;
     }
 
