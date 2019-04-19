@@ -25,6 +25,7 @@ import static org.apache.jackrabbit.oak.segment.Segment.MEDIUM_LIMIT;
 import static org.apache.jackrabbit.oak.segment.Segment.SMALL_LIMIT;
 import static org.apache.jackrabbit.oak.segment.SegmentStream.BLOCK_SIZE;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SeekableByteChannel;
@@ -276,14 +277,25 @@ public class SegmentBlob extends Record implements Blob, ChannelBlob, FileRefere
 
     @Override
     public SeekableByteChannel createChannel() {
-        // TODO Auto-generated method stub
-        return null;
+        return new BlobStreamChannel(this);
     }
 
     @Override
-    public FileChannel createFileChannel() {
-        // TODO Auto-generated method stub
-        return null;
+    public FileChannel createFileChannel() throws IOException {
+        String blobId = null;
+        FileChannel channel = null;
+        
+        if(blobStore instanceof TempFileReferenceProvider) {
+            blobId = getBlobId();
+        }
+        
+        if(blobId != null) {
+            channel = new BlobFileChannel((TempFileReferenceProvider)blobStore, blobId);
+        } else {
+            channel = new BlobFileChannel(this);
+        }
+        
+        return channel;
     }
 
 }

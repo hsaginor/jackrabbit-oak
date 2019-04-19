@@ -21,6 +21,7 @@ package org.apache.jackrabbit.oak.segment;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
@@ -28,23 +29,35 @@ import java.nio.channels.FileLock;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 
+import org.apache.jackrabbit.oak.api.Blob;
 import org.apache.jackrabbit.oak.api.blob.TempFileReference;
 import org.apache.jackrabbit.oak.api.blob.TempFileReferenceProvider;
 
 public class BlobFileChannel extends FileChannel implements SeekableByteChannel {
 
     private FileChannel delegate;
+    private File tempFile;
     private TempFileReference tmpFileRef;
 
     BlobFileChannel(TempFileReferenceProvider blobStore, String blobId) throws IOException {
         tmpFileRef = blobStore.getTempFileReference(blobId);
-        File f = tmpFileRef.getTempFile(null, null);
-        Path path = Paths.get(f.getAbsolutePath(), new String[] {});
+        tempFile = tmpFileRef.getTempFile(null, null);
+        Path path = Paths.get(tempFile.getAbsolutePath(), new String[] {});
         delegate = FileChannel.open(path, StandardOpenOption.READ, StandardOpenOption.WRITE);
+    }
+    
+    BlobFileChannel(Blob blob) throws IOException {
+        InputStream in = blob.getNewStream();
+        Path target = Files.createTempFile("tmpOakBlob", null);
+        Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+        tempFile = target.toFile();
+        tempFile.deleteOnExit();
     }
     
     @Override
@@ -162,6 +175,10 @@ public class BlobFileChannel extends FileChannel implements SeekableByteChannel 
     protected void implCloseChannel() throws IOException {
         if(tmpFileRef != null) {
             tmpFileRef.close();
+            delegate.close();
+        } else if(delegate != null) {
+            delegate.close();
+            tempFile.delete();
         }
         
     }

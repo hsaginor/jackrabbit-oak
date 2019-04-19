@@ -18,6 +18,7 @@
  */
 package org.apache.jackrabbit.oak.api.blob;
 
+import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SeekableByteChannel;
 
@@ -43,6 +44,6 @@ public interface ChannelBlob {
      * 
      * @return FileChannel
      */
-    FileChannel createFileChannel();
+    FileChannel createFileChannel() throws IOException;
     
 }
