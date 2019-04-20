@@ -28,9 +28,13 @@ import static org.apache.jackrabbit.oak.segment.file.FileStoreBuilder.fileStoreB
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.FileChannel;
+import java.nio.channels.SeekableByteChannel;
 
 import org.apache.jackrabbit.oak.api.Blob;
 import org.apache.jackrabbit.oak.api.CommitFailedException;
+import org.apache.jackrabbit.oak.plugins.value.BlobFileChannel;
+import org.apache.jackrabbit.oak.plugins.value.BlobStreamChannel;
 import org.apache.jackrabbit.oak.segment.file.FileStore;
 import org.apache.jackrabbit.oak.segment.file.InvalidFileStoreVersionException;
 import org.apache.jackrabbit.oak.spi.commit.CommitInfo;
@@ -110,6 +114,16 @@ public class BigInlinedBinaryIT {
                 @Override
                 public String getContentIdentity() {
                     return null;
+                }
+                
+                @Override
+                public SeekableByteChannel createChannel() {
+                    return new BlobStreamChannel(this);
+                }
+
+                @Override
+                public FileChannel createFileChannel() throws IOException {
+                    return new BlobFileChannel(this);
                 }
             };
     }

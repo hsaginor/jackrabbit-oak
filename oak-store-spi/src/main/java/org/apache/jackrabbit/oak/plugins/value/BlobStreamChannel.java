@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.jackrabbit.oak.segment;
+package org.apache.jackrabbit.oak.plugins.value;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,7 +32,7 @@ public class BlobStreamChannel implements SeekableByteChannel {
     private long position = 0;
     private InputStream stream;
     
-    BlobStreamChannel(Blob blob) {
+    public BlobStreamChannel(Blob blob) {
         this.blob = blob;
         this.stream = blob.getNewStream();
         this.stream.mark(0);

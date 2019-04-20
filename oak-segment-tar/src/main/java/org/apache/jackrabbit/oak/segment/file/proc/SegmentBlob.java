@@ -19,9 +19,14 @@
 
 package org.apache.jackrabbit.oak.segment.file.proc;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.FileChannel;
+import java.nio.channels.SeekableByteChannel;
 
 import org.apache.jackrabbit.oak.api.Blob;
+import org.apache.jackrabbit.oak.plugins.value.BlobFileChannel;
+import org.apache.jackrabbit.oak.plugins.value.BlobStreamChannel;
 import org.apache.jackrabbit.oak.segment.file.proc.Proc.Backend;
 import org.apache.jackrabbit.oak.segment.file.proc.Proc.Backend.Segment;
 import org.jetbrains.annotations.NotNull;
@@ -63,6 +68,16 @@ class SegmentBlob implements Blob {
     @Override
     public String getContentIdentity() {
         return null;
+    }
+    
+    @Override
+    public SeekableByteChannel createChannel() {
+        return new BlobStreamChannel(this);
+    }
+
+    @Override
+    public FileChannel createFileChannel() throws IOException {
+        return new BlobFileChannel(this);
     }
 
 }

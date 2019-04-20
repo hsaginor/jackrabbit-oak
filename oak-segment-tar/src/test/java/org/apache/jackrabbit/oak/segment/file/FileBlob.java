@@ -22,8 +22,14 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.FileChannel;
+import java.nio.channels.SeekableByteChannel;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 
 import org.apache.jackrabbit.oak.api.Blob;
+import org.apache.jackrabbit.oak.plugins.value.BlobFileChannel;
+import org.apache.jackrabbit.oak.plugins.value.BlobStreamChannel;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -79,5 +85,15 @@ public class FileBlob implements Blob {
     @Override
     public int hashCode() {
         return path.hashCode();
+    }
+    
+    @Override
+    public SeekableByteChannel createChannel() {
+        return new BlobStreamChannel(this);
+    }
+
+    @Override
+    public FileChannel createFileChannel() throws IOException {
+        return FileChannel.open(Paths.get(path), StandardOpenOption.READ, StandardOpenOption.WRITE);
     }
 }

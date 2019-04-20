@@ -21,6 +21,8 @@ package org.apache.jackrabbit.oak.plugins.value;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.FileChannel;
+import java.nio.channels.SeekableByteChannel;
 
 import javax.jcr.Binary;
 import javax.jcr.RepositoryException;
@@ -92,5 +94,15 @@ public class BinaryBasedBlob implements Blob {
     @Override
     public String getContentIdentity() {
         return null;
+    }
+
+    @Override
+    public SeekableByteChannel createChannel() {
+        return new BlobStreamChannel(this);
+    }
+
+    @Override
+    public FileChannel createFileChannel() throws IOException {
+        return new BlobFileChannel(this);
     }
 }

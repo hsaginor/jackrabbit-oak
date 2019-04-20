@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.jackrabbit.oak.segment;
+package org.apache.jackrabbit.oak.plugins.value;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -45,19 +45,20 @@ public class BlobFileChannel extends FileChannel implements SeekableByteChannel 
     private File tempFile;
     private TempFileReference tmpFileRef;
 
-    BlobFileChannel(TempFileReferenceProvider blobStore, String blobId) throws IOException {
-        tmpFileRef = blobStore.getTempFileReference(blobId);
+    public BlobFileChannel(TempFileReferenceProvider fileProvider, String blobId) throws IOException {
+        tmpFileRef = fileProvider.getTempFileReference(blobId);
         tempFile = tmpFileRef.getTempFile(null, null);
         Path path = Paths.get(tempFile.getAbsolutePath(), new String[] {});
         delegate = FileChannel.open(path, StandardOpenOption.READ, StandardOpenOption.WRITE);
     }
     
-    BlobFileChannel(Blob blob) throws IOException {
+    public BlobFileChannel(Blob blob) throws IOException {
         InputStream in = blob.getNewStream();
         Path target = Files.createTempFile("tmpOakBlob", null);
         Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
         tempFile = target.toFile();
         tempFile.deleteOnExit();
+        delegate = FileChannel.open(target, StandardOpenOption.READ, StandardOpenOption.WRITE);
     }
     
     @Override

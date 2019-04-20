@@ -35,10 +35,11 @@ import java.util.Set;
 import org.apache.jackrabbit.oak.api.Blob;
 import org.apache.jackrabbit.oak.api.blob.TempFileReferenceProvider;
 import org.apache.jackrabbit.oak.api.blob.TempFileReference;
-import org.apache.jackrabbit.oak.api.blob.ChannelBlob;
 import org.apache.jackrabbit.oak.api.blob.FileReferencable;
 import org.apache.jackrabbit.oak.plugins.blob.BlobStoreBlob;
 import org.apache.jackrabbit.oak.plugins.memory.AbstractBlob;
+import org.apache.jackrabbit.oak.plugins.value.BlobFileChannel;
+import org.apache.jackrabbit.oak.plugins.value.BlobStreamChannel;
 import org.apache.jackrabbit.oak.spi.blob.BlobStore;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -46,7 +47,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * A BLOB (stream of bytes). This is a record of type "VALUE".
  */
-public class SegmentBlob extends Record implements Blob, ChannelBlob, FileReferencable {
+public class SegmentBlob extends Record implements Blob, FileReferencable {
 
     @Nullable
     private final BlobStore blobStore;
