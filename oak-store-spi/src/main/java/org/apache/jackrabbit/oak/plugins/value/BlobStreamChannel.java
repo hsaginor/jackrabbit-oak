@@ -18,9 +18,12 @@
  */
 package org.apache.jackrabbit.oak.plugins.value;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SeekableByteChannel;
 
 import org.apache.jackrabbit.oak.api.Blob;
@@ -31,10 +34,12 @@ public class BlobStreamChannel implements SeekableByteChannel {
     private Blob blob;
     private long position = 0;
     private InputStream stream;
+    private ReadableByteChannel channel;
     
     public BlobStreamChannel(Blob blob) {
         this.blob = blob;
-        this.stream = blob.getNewStream();
+        this.stream = new BufferedInputStream(blob.getNewStream());
+        this.channel = Channels.newChannel(stream);
         this.stream.mark(0);
     }
     
@@ -55,21 +60,11 @@ public class BlobStreamChannel implements SeekableByteChannel {
     @Override
     public int read(ByteBuffer dst) throws IOException {
         checkClosed();
-        int bytesRead = 0;
-        
-        if(dst.hasArray()) {
-            bytesRead = stream.read(dst.array());
-        } else {
-            byte tmpBuff[] = new byte[dst.capacity()];
-            bytesRead = stream.read(tmpBuff);
-            dst.put(tmpBuff);
-            tmpBuff = null;
-        }
-        
+        int bytesRead = channel.read(dst);
         position += bytesRead;
         return bytesRead;
     }
-
+    
     @Override
     public int write(ByteBuffer src) throws IOException {
         throw new UnsupportedOperationException();
@@ -85,11 +80,13 @@ public class BlobStreamChannel implements SeekableByteChannel {
         checkClosed();
         
         if(newPosition > position) {
-            if (newPosition != stream.skip(newPosition - position)) {
+            long bytesToSkip = newPosition - position;
+            if (bytesToSkip != stream.skip(newPosition - position)) {
                 throw new IOException("Can't skip to position " + newPosition);
             } 
-        } else if(position > newPosition) {
+        } else {
             stream.reset();
+            stream.mark(0);
             stream.skip(newPosition);
         }
         
