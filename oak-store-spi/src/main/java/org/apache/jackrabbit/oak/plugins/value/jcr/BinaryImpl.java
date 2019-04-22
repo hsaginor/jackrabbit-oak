@@ -21,11 +21,14 @@ import static com.google.common.base.Objects.toStringHelper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.nio.channels.FileChannel;
+import java.nio.channels.SeekableByteChannel;
 
 import javax.jcr.PropertyType;
 import javax.jcr.RepositoryException;
 
 import com.google.common.base.Objects;
+import org.apache.jackrabbit.api.ChannelBinary;
 import org.apache.jackrabbit.api.ReferenceBinary;
 import org.apache.jackrabbit.api.binary.BinaryDownload;
 import org.apache.jackrabbit.api.binary.BinaryDownloadOptions;
@@ -41,7 +44,7 @@ import org.slf4j.LoggerFactory;
 /**
  * TODO document
  */
-class BinaryImpl implements ReferenceBinary, BinaryDownload, FileReferencable {
+class BinaryImpl implements ReferenceBinary, BinaryDownload, ChannelBinary, FileReferencable {
     private static final Logger LOG = LoggerFactory.getLogger(BinaryImpl.class);
 
     private final ValueImpl value;
@@ -152,6 +155,16 @@ class BinaryImpl implements ReferenceBinary, BinaryDownload, FileReferencable {
     @Override
     public String toString() {
         return toStringHelper(this).addValue(value).toString();
+    }
+
+    @Override
+    public SeekableByteChannel createChannel() throws IOException, RepositoryException {
+        return value.getBlob().createChannel();
+    }
+
+    @Override
+    public FileChannel createFileChannel() throws IOException, RepositoryException {
+        return value.getBlob().createFileChannel();
     }
 
 }
