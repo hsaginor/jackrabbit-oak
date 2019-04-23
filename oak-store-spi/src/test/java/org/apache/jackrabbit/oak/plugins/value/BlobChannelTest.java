@@ -12,9 +12,9 @@ import java.nio.channels.SeekableByteChannel;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
 import java.util.Random;
 
-import org.apache.commons.io.IOUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -80,30 +80,24 @@ public class BlobChannelTest {
     @Test
     public void testPositionChangeStreamChannel() throws IOException {
         SeekableByteChannel testBlobChannel = testBlob.createChannel();
-        long blobBytesRead;
-        long testBytesRead;
         
         ByteBuffer blobBuff = ByteBuffer.allocate(1000);
         ByteBuffer testBuff = ByteBuffer.allocate(1000);
-        byte blobBytes[] = blobBuff.array();
-        byte testBytes[] = testBuff.array();
-            
-        blobBytesRead = testBlobChannel.read(blobBuff);
-        testBytesRead = testByteChannel.read(testBuff);
-        assertEquals(blobBytesRead, testBytesRead);
-        assertArrayEquals(blobBytes, testBytes);
         
-        long testPositions[] = {1101, 3001, 100};
+        long testPositions[] = {testBlobChannel.size()-1, 0, 1101, 3001, 100, testBlobChannel.size()-1, testBlobChannel.size()+10, 0};
         for(long position : testPositions) {
             blobBuff.rewind();
+            Arrays.fill(blobBuff.array(), (byte) 0);
             testBuff.rewind();
+            Arrays.fill(testBuff.array(), (byte) 0);
             assertRead(testBlobChannel, blobBuff, testBuff, position);
         }
     }
     
     private void assertRead(SeekableByteChannel testBlobChannel, ByteBuffer blobBuff, ByteBuffer testBuff, long newPosition) throws IOException {
-        testBlobChannel.position(newPosition);
-        testByteChannel.position(newPosition);
+        long x = testByteChannel.position(newPosition).position();
+        long y = testBlobChannel.position(newPosition).position();
+        
         int blobBytesRead = testBlobChannel.read(blobBuff);
         int testBytesRead = testByteChannel.read(testBuff);
         assertEquals(blobBytesRead, testBytesRead);
@@ -138,10 +132,10 @@ public class BlobChannelTest {
         try {
             while(file.length() < TEST_FILE_SIZE) {
                 rand.nextBytes(buff);
-                IOUtils.write(buff, out);
+                out.write(buff);
             }
         } finally {
-            IOUtils.closeQuietly(out);
+            out.close();
         }
         
         return file;
