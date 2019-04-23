@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SeekableByteChannel;
 
@@ -39,8 +40,8 @@ public class BlobStreamChannel implements SeekableByteChannel {
     public BlobStreamChannel(Blob blob) {
         this.blob = blob;
         this.stream = new BufferedInputStream(blob.getNewStream());
-        this.channel = Channels.newChannel(stream);
         this.stream.mark(0);
+        this.channel = Channels.newChannel(stream);
     }
     
     @Override
@@ -51,8 +52,8 @@ public class BlobStreamChannel implements SeekableByteChannel {
     @Override
     public void close() throws IOException {
         checkClosed();
-        if(stream != null) {
-            stream.close();
+        if(channel != null) {
+            channel.close();
         }
         isOpen = false;
     }
@@ -77,21 +78,74 @@ public class BlobStreamChannel implements SeekableByteChannel {
 
     @Override
     public SeekableByteChannel position(long newPosition) throws IOException {
+        if(newPosition < 0)
+            throw new IllegalArgumentException("Cannot set position to " + newPosition);
+        
         checkClosed();
+        
+        if(position == newPosition)
+            return this;
         
         if(newPosition > position) {
             long bytesToSkip = newPosition - position;
-            if (bytesToSkip != stream.skip(newPosition - position)) {
-                throw new IOException("Can't skip to position " + newPosition);
-            } 
+            skip(bytesToSkip); 
         } else {
-            stream.reset();
+            // Depending on how internal buffer is setup in BufferedInputStream it may not be able to reset to the beginning.
+            // In this case we will case current channel and create a new one to read from the blob.
+            if(!tryReset()) {
+                channel.close();
+                stream = new BufferedInputStream(blob.getNewStream());
+                channel = Channels.newChannel(stream);
+            }
             stream.mark(0);
-            stream.skip(newPosition);
+            skip(newPosition);
         }
         
         position = newPosition;
+        
         return this;
+    }
+    
+    /**
+     * This method attempts to compensate for the behavior of skip method in BufferedInputStream which states as follows. 
+     * "The skip method may, for a variety of reasons, end up skipping over some smaller number of bytes, possibly 0 ..."
+     * 
+     * This is done by calling stream.skip multiple times until the specified number of bytes is skipped.
+     * 
+     * @param n
+     * @return
+     * @throws IOException 
+     */
+    private long skip(long n) throws IOException {
+        
+        long bytesToSkip = n;
+        long totalBytesSkipped = 0;
+       
+        long skipped = stream.skip(bytesToSkip);
+        totalBytesSkipped += skipped;
+      
+        while(bytesToSkip > skipped) {
+            bytesToSkip = bytesToSkip-skipped;
+            if(bytesToSkip > stream.available()) {
+                break;
+            }
+            
+            skipped = stream.skip(bytesToSkip);
+            totalBytesSkipped += skipped;
+        }
+        
+        return totalBytesSkipped;
+    }
+    
+    private boolean tryReset() {
+        BufferedInputStream bin = (BufferedInputStream) stream;
+        try {
+            bin.reset();
+        } catch (IOException e) {
+            return false;
+        }
+        
+        return true;
     }
 
     @Override
@@ -104,9 +158,9 @@ public class BlobStreamChannel implements SeekableByteChannel {
         throw new UnsupportedOperationException();
     }
     
-    private void checkClosed() throws IOException {
+    private void checkClosed() throws ClosedChannelException {
         if(!isOpen()) {
-            throw new IOException("This channel has been closed.");
+            throw new ClosedChannelException();
         }
     }
 
