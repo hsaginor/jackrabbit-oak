@@ -25,13 +25,19 @@ import static org.apache.jackrabbit.oak.segment.Segment.MEDIUM_LIMIT;
 import static org.apache.jackrabbit.oak.segment.Segment.SMALL_LIMIT;
 import static org.apache.jackrabbit.oak.segment.SegmentStream.BLOCK_SIZE;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.FileChannel;
+import java.nio.channels.SeekableByteChannel;
 import java.util.List;
 import java.util.Set;
 
 import org.apache.jackrabbit.oak.api.Blob;
+import org.apache.jackrabbit.oak.api.blob.TempFileReferenceProvider;
 import org.apache.jackrabbit.oak.plugins.blob.BlobStoreBlob;
 import org.apache.jackrabbit.oak.plugins.memory.AbstractBlob;
+import org.apache.jackrabbit.oak.plugins.value.BlobFileChannel;
+import org.apache.jackrabbit.oak.plugins.value.BlobStreamChannel;
 import org.apache.jackrabbit.oak.spi.blob.BlobStore;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -255,6 +261,29 @@ public class SegmentBlob extends Record implements Blob {
         }
 
         return length;
+    }
+
+    @Override
+    public SeekableByteChannel createChannel() {
+        return new BlobStreamChannel(this);
+    }
+
+    @Override
+    public FileChannel createFileChannel() throws IOException {
+        String blobId = null;
+        FileChannel channel = null;
+
+        if(blobStore instanceof TempFileReferenceProvider) {
+            blobId = getBlobId();
+        }
+
+        if(blobId != null) {
+            channel = new BlobFileChannel((TempFileReferenceProvider)blobStore, blobId);
+        } else {
+            channel = new BlobFileChannel(this);
+        }
+
+        return channel;
     }
 
 }

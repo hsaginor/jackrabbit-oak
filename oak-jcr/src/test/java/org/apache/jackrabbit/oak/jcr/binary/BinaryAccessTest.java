@@ -21,10 +21,13 @@ package org.apache.jackrabbit.oak.jcr.binary;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.channels.FileChannel;
+import java.nio.channels.SeekableByteChannel;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -58,6 +61,8 @@ import org.apache.jackrabbit.oak.jcr.binary.fixtures.datastore.FileDataStoreFixt
 import org.apache.jackrabbit.oak.jcr.binary.fixtures.nodestore.SegmentMemoryNodeStoreFixture;
 import org.apache.jackrabbit.oak.jcr.binary.util.BinaryAccessTestUtils;
 import org.apache.jackrabbit.oak.jcr.binary.util.Content;
+import org.apache.jackrabbit.oak.plugins.value.BlobFileChannel;
+import org.apache.jackrabbit.oak.plugins.value.BlobStreamChannel;
 import org.apache.jackrabbit.oak.spi.state.NodeStore;
 import org.apache.jackrabbit.test.LogPrintWriter;
 import org.apache.jackrabbit.test.api.observation.EventResult;
@@ -188,6 +193,16 @@ public class BinaryAccessTest extends AbstractRepositoryTest {
                 @Override
                 public String getContentIdentity() {
                     return DigestUtils.md5Hex(blobContent.toString());
+                }
+
+                @Override
+                public SeekableByteChannel createChannel() {
+                    return new BlobStreamChannel(this);
+                }
+
+                @Override
+                public FileChannel createFileChannel() throws IOException {
+                    return new BlobFileChannel(this);
                 }
             };
         }

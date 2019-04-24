@@ -18,7 +18,10 @@
  */
 package org.apache.jackrabbit.oak.api;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.FileChannel;
+import java.nio.channels.SeekableByteChannel;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -87,4 +90,22 @@ public interface Blob {
      */
     @Nullable
     String getContentIdentity();
+    
+    /**
+     * Returns SeekableByteChannel object for accessing this blob. This is a read only SeekableByteChannel.
+     * Write operations will throw UnsupportedOperationException.
+     * 
+     * @return SeekableByteChannel
+     */
+    SeekableByteChannel createChannel();
+    
+    /**
+     * Returns FileChannel object for accessing this blob.
+     * 
+     * None that calls to write operations of the provided Channel will have no effect 
+     * on the stored binary. Applications must use JCR API to persist changes.
+     * 
+     * @return FileChannel
+     */
+    FileChannel createFileChannel() throws IOException;
 }

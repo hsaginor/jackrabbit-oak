@@ -20,9 +20,13 @@ package org.apache.jackrabbit.oak.plugins.blob;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.FileChannel;
+import java.nio.channels.SeekableByteChannel;
 
 import org.apache.jackrabbit.oak.spi.blob.BlobStore;
 import org.apache.jackrabbit.oak.api.Blob;
+import org.apache.jackrabbit.oak.plugins.value.BlobFileChannel;
+import org.apache.jackrabbit.oak.plugins.value.BlobStreamChannel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -75,6 +79,16 @@ public class BlobStoreBlob implements Blob {
 
     public BlobStore getBlobStore() {
         return blobStore;
+    }
+    
+    @Override
+    public SeekableByteChannel createChannel() {
+        return new BlobStreamChannel(this);
+    }
+
+    @Override
+    public FileChannel createFileChannel() throws IOException {
+        return new BlobFileChannel(this);
     }
 
     //------------------------------------------------------------< Object >--

@@ -16,60 +16,77 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package org.apache.jackrabbit.oak.plugins.value;
 
-package org.apache.jackrabbit.oak.segment.file.proc;
-
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SeekableByteChannel;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 
 import org.apache.jackrabbit.oak.api.Blob;
 import org.apache.jackrabbit.oak.plugins.value.BlobFileChannel;
 import org.apache.jackrabbit.oak.plugins.value.BlobStreamChannel;
-import org.apache.jackrabbit.oak.segment.file.proc.Proc.Backend;
-import org.apache.jackrabbit.oak.segment.file.proc.Proc.Backend.Segment;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-class SegmentBlob implements Blob {
+/**
+ * A blob as a file in the file system.
+ * Used for testing.
+ */
+public class TestFileBlob implements Blob {
 
-    private final Backend backend;
+    private final String path;
 
-    private final String segmentId;
-
-    private final Segment segment;
-
-    SegmentBlob(Backend backend, String segmentId, Segment segment) {
-        this.backend = backend;
-        this.segmentId = segmentId;
-        this.segment = segment;
+    public TestFileBlob(String path) {
+        this.path = path;
     }
 
-    @NotNull
-    @Override
-    public InputStream getNewStream() {
-        return backend.getSegmentData(segmentId)
-            .orElseThrow(() -> new IllegalStateException("segment not found"));
-    }
-
-    @Override
-    public long length() {
-        return segment.getLength();
-    }
-
-    @Nullable
     @Override
     public String getReference() {
-        return null;
+        return path; // FIXME: should be a secure reference
     }
 
-    @Nullable
     @Override
     public String getContentIdentity() {
         return null;
     }
 
+    @NotNull
+    @Override
+    public InputStream getNewStream() {
+        try {
+            return new FileInputStream(getFile());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public long length() {
+        return getFile().length();
+    }
+
+    private File getFile() {
+        return new File(path);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof TestFileBlob) {
+            TestFileBlob other = (TestFileBlob) obj;
+            return this.path.equals(other.path);
+        }
+        return super.equals(obj);
+    }
+
+    @Override
+    public int hashCode() {
+        return path.hashCode();
+    }
+    
     @Override
     public SeekableByteChannel createChannel() {
         return new BlobStreamChannel(this);
@@ -77,7 +94,6 @@ class SegmentBlob implements Blob {
 
     @Override
     public FileChannel createFileChannel() throws IOException {
-        return new BlobFileChannel(this);
+        return FileChannel.open(Paths.get(path), StandardOpenOption.READ, StandardOpenOption.WRITE);
     }
-
 }

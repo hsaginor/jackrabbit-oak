@@ -16,12 +16,22 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
-/**
- * Package related to direct upload/download of blobs.
- */
-@Version("1.1.0")
 package org.apache.jackrabbit.oak.api.blob;
 
-import org.osgi.annotation.versioning.Version;
+import javax.jcr.RepositoryException;
 
+/**
+ * Represents binary which can be accessed as a File.
+ * 
+ */
+public interface FileReferencable {
+
+    /**
+     * Provides temporary file access to the binary trough TempFileReference interface. 
+     * This method may return null if implementation cannot provide temporary file access.
+     * 
+     * @return
+     */
+    TempFileReference getTempFileReference() throws RepositoryException;
+    
+}

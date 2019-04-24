@@ -16,12 +16,29 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
-/**
- * Package related to direct upload/download of blobs.
- */
-@Version("1.1.0")
 package org.apache.jackrabbit.oak.api.blob;
 
-import org.osgi.annotation.versioning.Version;
+import java.io.File;
+import java.io.IOException;
 
+/**
+ * 
+ * Represents temporary file access to a binary.
+ *
+ */
+public interface TempFileReference {
+
+    /**
+     * Returns File reference.
+     * 
+     * @param prefixHint
+     * @param suffixHint
+     * @return
+     */
+    public File getTempFile(String prefixHint, String suffixHint) throws IOException;
+    
+    /**
+     * Must be called by the application after processing of the file has completed.  
+     */
+    public void close();
+}

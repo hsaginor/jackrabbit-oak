@@ -20,12 +20,16 @@ package org.apache.jackrabbit.oak.plugins.memory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.FileChannel;
+import java.nio.channels.SeekableByteChannel;
 
 import com.google.common.hash.HashCode;
 import com.google.common.hash.Hashing;
 import com.google.common.io.ByteSource;
 
 import org.apache.jackrabbit.oak.api.Blob;
+import org.apache.jackrabbit.oak.plugins.value.BlobFileChannel;
+import org.apache.jackrabbit.oak.plugins.value.BlobStreamChannel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,6 +40,16 @@ import org.jetbrains.annotations.Nullable;
  */
 public abstract class AbstractBlob implements Blob {
 
+    @Override
+    public SeekableByteChannel createChannel() {
+        return new BlobStreamChannel(this);
+    }
+
+    @Override
+    public FileChannel createFileChannel() throws IOException {
+        return new BlobFileChannel(this);
+    }
+    
     private static ByteSource supplier(final Blob blob) {
         return new ByteSource() {
             @Override
