@@ -55,8 +55,70 @@ public class BlobChannelTest {
     
     @Test
     public void testReadStreamChannel() throws IOException {
-        SeekableByteChannel testBlobChannel = testBlob.createChannel();
+        assertFullRead(testBlob.createChannel());   
+    }
+    
+    @Test
+    public void testReadFileChannel() throws IOException {
+        assertFullRead(testBlob.createFileChannel());   
+    }
+    
+    @Test
+    public void testPositionChangeStreamChannel() throws IOException {
+        testPositionChange(testBlob.createChannel());
+    }
+    
+    @Test
+    public void testPositionChangeFileChannel() throws IOException {
+        testPositionChange(testBlob.createFileChannel());
+    }
+    
+    @Test
+    public void testPerformances() throws IOException {
+        int numberOfReads = 100000;
+        SeekableByteChannel blobChannel = testBlob.createChannel();
+        FileChannel blobFileChannel = testBlob.createFileChannel();
         
+        long readBlobTotalTime = System.currentTimeMillis();
+        for(int i=0; i<numberOfReads; i++) {
+            blobChannel.position(0);
+            readFully(blobChannel);
+        }
+        readBlobTotalTime = System.currentTimeMillis() - readBlobTotalTime;
+        System.out.println("Blob channel read " + numberOfReads + " times in " + readBlobTotalTime + "ms.");
+        
+        long readBlobFileTotalTime = System.currentTimeMillis();
+        for(int i=0; i<numberOfReads; i++) {
+            blobFileChannel.position(0);
+            readFully(blobFileChannel);
+        }
+        readBlobFileTotalTime = System.currentTimeMillis() - readBlobFileTotalTime;
+        System.out.println("Blob FileChannel read " + numberOfReads + " times in " + readBlobFileTotalTime + "ms.");
+        
+        long readFileTotalTime = System.currentTimeMillis();
+        for(int i=0; i<numberOfReads; i++) {
+            testByteChannel.position(0);
+            readFully(testByteChannel);
+        }
+        readFileTotalTime = System.currentTimeMillis() - readFileTotalTime;
+        System.out.println("File channel read " + numberOfReads + " times in " + readFileTotalTime + "ms.");
+    }
+    
+    public void testPositionChange(SeekableByteChannel testBlobChannel) throws IOException {
+        ByteBuffer blobBuff = ByteBuffer.allocate(1000);
+        ByteBuffer testBuff = ByteBuffer.allocate(1000);
+        
+        long testPositions[] = {testBlobChannel.size()-1, 0, 1101, 3001, 100, testBlobChannel.size()-1, testBlobChannel.size()+10, 0};
+        for(long position : testPositions) {
+            blobBuff.rewind();
+            Arrays.fill(blobBuff.array(), (byte) 0);
+            testBuff.rewind();
+            Arrays.fill(testBuff.array(), (byte) 0);
+            assertRead(testBlobChannel, blobBuff, testBuff, position);
+        }
+    }
+    
+    private void assertFullRead(SeekableByteChannel testBlobChannel) throws IOException {
         ByteBuffer blobBuff = ByteBuffer.allocate(100);
         ByteBuffer testBuff = ByteBuffer.allocate(100);
         byte blobBytes[] = blobBuff.array();
@@ -74,24 +136,6 @@ public class BlobChannelTest {
             testBuff.rewind();
             totalBytesRead += bytesReadFromStream;
         }
-        
-    }
-    
-    @Test
-    public void testPositionChangeStreamChannel() throws IOException {
-        SeekableByteChannel testBlobChannel = testBlob.createChannel();
-        
-        ByteBuffer blobBuff = ByteBuffer.allocate(1000);
-        ByteBuffer testBuff = ByteBuffer.allocate(1000);
-        
-        long testPositions[] = {testBlobChannel.size()-1, 0, 1101, 3001, 100, testBlobChannel.size()-1, testBlobChannel.size()+10, 0};
-        for(long position : testPositions) {
-            blobBuff.rewind();
-            Arrays.fill(blobBuff.array(), (byte) 0);
-            testBuff.rewind();
-            Arrays.fill(testBuff.array(), (byte) 0);
-            assertRead(testBlobChannel, blobBuff, testBuff, position);
-        }
     }
     
     private void assertRead(SeekableByteChannel testBlobChannel, ByteBuffer blobBuff, ByteBuffer testBuff, long newPosition) throws IOException {
@@ -104,6 +148,23 @@ public class BlobChannelTest {
         byte blobBytes[] = blobBuff.array();
         byte testBytes[] = testBuff.array();
         assertArrayEquals(blobBytes, testBytes);
+    }
+    
+    private long readFully(SeekableByteChannel channel) throws IOException {
+        long start = System.currentTimeMillis();
+        
+        long totalBytesRead = 0;
+        long bytesToRead = testFile.length();
+        ByteBuffer buff = ByteBuffer.allocate(1000);
+        
+        while(totalBytesRead < bytesToRead) {
+            long bytesRead = channel.read(buff);
+            // printArrays(buff.array());
+            buff.rewind();
+            totalBytesRead += bytesRead;
+        }
+        
+        return System.currentTimeMillis() - start;
     }
     
     // method for debugging 
