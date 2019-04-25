@@ -38,7 +38,7 @@ import org.jetbrains.annotations.NotNull;
  */
 public class TestFileBlob implements Blob {
 
-    private final String path;
+    protected final String path;
 
     public TestFileBlob(String path) {
         this.path = path;
@@ -94,6 +94,6 @@ public class TestFileBlob implements Blob {
 
     @Override
     public FileChannel createFileChannel() throws IOException {
-        return FileChannel.open(Paths.get(path), StandardOpenOption.READ, StandardOpenOption.WRITE);
+        return new BlobFileChannel(this);
     }
 }

@@ -27,7 +27,6 @@ public class BlobChannelTest {
     
     private static File testDir;
     private static File testFile;
-    private static TestFileBlob testBlob;
     private static FileChannel testFileChannel;
     private static SeekableByteChannel testByteChannel;
     
@@ -35,7 +34,7 @@ public class BlobChannelTest {
     public static void setUpClass() throws IOException {
         testFile = geterateTestFile();
         testDir = testFile.getParentFile();
-        testBlob = new TestFileBlob(testFile.getAbsolutePath());
+        // testBlob = new TestFileBlob(testFile.getAbsolutePath());
         
         Path path = Paths.get(testFile.getAbsolutePath());
         testFileChannel = FileChannel.open(path, StandardOpenOption.READ);
@@ -55,45 +54,92 @@ public class BlobChannelTest {
     
     @Test
     public void testReadStreamChannel() throws IOException {
-        assertFullRead(testBlob.createChannel());   
+        TestFileBlob testBlob = new TestFileBlob(testFile.getAbsolutePath());
+        SeekableByteChannel channel = null;
+        
+        try {
+            channel = testBlob.createChannel();
+            assertFullRead(channel);   
+        } finally {
+            if(channel != null)
+                channel.close();
+        }
     }
     
     @Test
     public void testReadFileChannel() throws IOException {
-        assertFullRead(testBlob.createFileChannel());   
+        TestFileBlob testBlob = new TestFileBlob(testFile.getAbsolutePath());
+        FileChannel channel = null;
+        
+        try {
+            channel = testBlob.createFileChannel();
+            assertFullRead(channel);   
+        } finally {
+            if(channel != null)
+                channel.close();
+        }
     }
     
     @Test
     public void testPositionChangeStreamChannel() throws IOException {
-        testPositionChange(testBlob.createChannel());
+        TestFileBlob testBlob = new TestFileBlob(testFile.getAbsolutePath());
+        SeekableByteChannel channel = null;
+        
+        try {
+            channel = testBlob.createChannel();
+            testPositionChange(testBlob.createChannel());
+        } finally {
+            if(channel != null)
+                channel.close();
+        }
     }
     
     @Test
     public void testPositionChangeFileChannel() throws IOException {
-        testPositionChange(testBlob.createFileChannel());
+        TestFileBlob testBlob = new TestFileBlob(testFile.getAbsolutePath());
+        FileChannel channel = null;
+        
+        try {
+            channel = testBlob.createFileChannel();
+            testPositionChange(channel);
+        } finally {
+            if(channel != null)
+                channel.close();
+        }
     }
     
     @Test
     public void testPerformances() throws IOException {
         int numberOfReads = 100000;
-        SeekableByteChannel blobChannel = testBlob.createChannel();
-        FileChannel blobFileChannel = testBlob.createFileChannel();
+        TestFileBlob testBlob = new TestFileBlob(testFile.getAbsolutePath());
         
-        long readBlobTotalTime = System.currentTimeMillis();
-        for(int i=0; i<numberOfReads; i++) {
-            blobChannel.position(0);
-            readFully(blobChannel);
-        }
-        readBlobTotalTime = System.currentTimeMillis() - readBlobTotalTime;
-        System.out.println("Blob channel read " + numberOfReads + " times in " + readBlobTotalTime + "ms.");
+        SeekableByteChannel blobChannel = null;
+        SeekableByteChannel blobWrapperChannel = null;
+        FileChannel blobFileChannel = null;
         
-        long readBlobFileTotalTime = System.currentTimeMillis();
-        for(int i=0; i<numberOfReads; i++) {
-            blobFileChannel.position(0);
-            readFully(blobFileChannel);
+        try {
+            blobChannel = testBlob.createChannel();
+            System.out.println("Blob channel read " + numberOfReads + " times in " + readTimer(blobChannel, numberOfReads) + "ms.");
+        } finally {
+            if(blobChannel != null)
+                blobChannel.close();
         }
-        readBlobFileTotalTime = System.currentTimeMillis() - readBlobFileTotalTime;
-        System.out.println("Blob FileChannel read " + numberOfReads + " times in " + readBlobFileTotalTime + "ms.");
+        
+        try {
+            blobWrapperChannel = new WrapperChannelBlob(testFile.getAbsolutePath()).createChannel();
+            System.out.println("Blob wrapper channel read " + numberOfReads + " times in " + readTimer(blobWrapperChannel, numberOfReads) + "ms.");
+        } finally {
+            if(blobWrapperChannel != null) 
+                blobWrapperChannel.close();
+        }
+        
+        try {
+            blobFileChannel = testBlob.createFileChannel();
+            System.out.println("Blob FileChannel read " + numberOfReads + " times in " + readTimer(blobFileChannel, numberOfReads) + "ms.");
+        } finally {
+            if(blobFileChannel != null)
+                blobFileChannel.close();
+        }
         
         long readFileTotalTime = System.currentTimeMillis();
         for(int i=0; i<numberOfReads; i++) {
@@ -102,6 +148,17 @@ public class BlobChannelTest {
         }
         readFileTotalTime = System.currentTimeMillis() - readFileTotalTime;
         System.out.println("File channel read " + numberOfReads + " times in " + readFileTotalTime + "ms.");
+    }
+    
+    private long readTimer(SeekableByteChannel channel, int numberOfReads) throws IOException {
+        long start = System.currentTimeMillis();
+        
+        for(int i=0; i<numberOfReads; i++) {
+            channel.position(0);
+            readFully(channel);
+        }
+        
+        return System.currentTimeMillis() - start;
     }
     
     public void testPositionChange(SeekableByteChannel testBlobChannel) throws IOException {
@@ -200,5 +257,23 @@ public class BlobChannelTest {
         }
         
         return file;
+    }
+    
+    private class WrapperChannelBlob extends TestFileBlob {
+
+        public WrapperChannelBlob(String path) {
+            super(path);
+        }
+        
+        @Override
+        public SeekableByteChannel createChannel() {
+            FileChannel channel;
+            try {
+                channel = FileChannel.open(Paths.get(path), StandardOpenOption.READ);
+                return new BlobReadOnlyChannelWrapper(channel);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 }
