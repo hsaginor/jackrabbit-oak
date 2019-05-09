@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.net.URI;
+import java.nio.channels.SeekableByteChannel;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -41,6 +42,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import javax.jcr.RepositoryException;
+import org.apache.jackrabbit.oak.plugins.value.BlobReadOnlyChannelWrapper;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;

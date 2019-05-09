@@ -3,9 +3,11 @@ package org.apache.jackrabbit.oak.plugins.value;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SeekableByteChannel;
@@ -15,6 +17,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.Random;
 
+import org.apache.jackrabbit.oak.plugins.value.BlobReadOnlyChannelWrapper;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -111,15 +114,35 @@ public class BlobChannelTest {
     @Test
     public void testPerformances() throws IOException {
         int numberOfReads = 100000;
+        int bufferSize = 8000;
         TestFileBlob testBlob = new TestFileBlob(testFile.getAbsolutePath());
         
         SeekableByteChannel blobChannel = null;
         SeekableByteChannel blobWrapperChannel = null;
         FileChannel blobFileChannel = null;
+        InputStream in = null;
+        BufferedInputStream bin = null;
+        
+        /*
+        try {
+            in = testBlob.getNewStream();
+            System.out.println("Blob InputStream read " + numberOfReads + " times in " + readTimer(in, numberOfReads) + "ms.");
+        } finally {
+            if(in != null)
+                in.close();
+        }
+        
+        try {
+            bin = new BufferedInputStream(testBlob.getNewStream());
+            System.out.println("Blob BufferedInputStream read " + numberOfReads + " times in " + readTimer(bin, numberOfReads) + "ms.");
+        } finally {
+            if(bin != null)
+                bin.close();
+        }*/
         
         try {
             blobChannel = testBlob.createChannel();
-            System.out.println("Blob channel read " + numberOfReads + " times in " + readTimer(blobChannel, numberOfReads) + "ms.");
+            System.out.println("Blob channel read " + numberOfReads + " times in " + readTimer(blobChannel, numberOfReads, bufferSize) + "ms.");
         } finally {
             if(blobChannel != null)
                 blobChannel.close();
@@ -127,7 +150,7 @@ public class BlobChannelTest {
         
         try {
             blobWrapperChannel = new WrapperChannelBlob(testFile.getAbsolutePath()).createChannel();
-            System.out.println("Blob wrapper channel read " + numberOfReads + " times in " + readTimer(blobWrapperChannel, numberOfReads) + "ms.");
+            System.out.println("Blob wrapper channel read " + numberOfReads + " times in " + readTimer(blobWrapperChannel, numberOfReads, bufferSize) + "ms.");
         } finally {
             if(blobWrapperChannel != null) 
                 blobWrapperChannel.close();
@@ -135,7 +158,7 @@ public class BlobChannelTest {
         
         try {
             blobFileChannel = testBlob.createFileChannel();
-            System.out.println("Blob FileChannel read " + numberOfReads + " times in " + readTimer(blobFileChannel, numberOfReads) + "ms.");
+            System.out.println("Blob FileChannel read " + numberOfReads + " times in " + readTimer(blobFileChannel, numberOfReads, bufferSize) + "ms.");
         } finally {
             if(blobFileChannel != null)
                 blobFileChannel.close();
@@ -144,18 +167,33 @@ public class BlobChannelTest {
         long readFileTotalTime = System.currentTimeMillis();
         for(int i=0; i<numberOfReads; i++) {
             testByteChannel.position(0);
-            readFully(testByteChannel);
+            readFully(testByteChannel, bufferSize);
         }
         readFileTotalTime = System.currentTimeMillis() - readFileTotalTime;
         System.out.println("File channel read " + numberOfReads + " times in " + readFileTotalTime + "ms.");
     }
     
-    private long readTimer(SeekableByteChannel channel, int numberOfReads) throws IOException {
+    private long readTimer(SeekableByteChannel channel, int numberOfReads, int bufferSize) throws IOException {
         long start = System.currentTimeMillis();
         
         for(int i=0; i<numberOfReads; i++) {
             channel.position(0);
-            readFully(channel);
+            readFully(channel, bufferSize);
+        }
+        
+        return System.currentTimeMillis() - start;
+    }
+    
+    private long readTimer(InputStream stream, int numberOfReads) throws IOException {
+        long start = System.currentTimeMillis();
+        
+        //if(stream.markSupported())
+        //    stream.mark(0);
+        
+        for(int i=0; i<numberOfReads; i++) {
+            //if(stream.markSupported()) 
+            //    stream.reset();
+            readFully(stream);
         }
         
         return System.currentTimeMillis() - start;
@@ -207,12 +245,12 @@ public class BlobChannelTest {
         assertArrayEquals(blobBytes, testBytes);
     }
     
-    private long readFully(SeekableByteChannel channel) throws IOException {
+    private long readFully(SeekableByteChannel channel, int bufferSize) throws IOException {
         long start = System.currentTimeMillis();
         
         long totalBytesRead = 0;
         long bytesToRead = testFile.length();
-        ByteBuffer buff = ByteBuffer.allocate(1000);
+        ByteBuffer buff = ByteBuffer.allocate(bufferSize);
         
         while(totalBytesRead < bytesToRead) {
             long bytesRead = channel.read(buff);
@@ -220,6 +258,15 @@ public class BlobChannelTest {
             buff.rewind();
             totalBytesRead += bytesRead;
         }
+        
+        return System.currentTimeMillis() - start;
+    }
+    
+    private long readFully(InputStream stream) throws IOException {
+        long start = System.currentTimeMillis();
+        byte buff[] = new byte[1000];
+        
+        while(stream.read(buff) != -1);
         
         return System.currentTimeMillis() - start;
     }

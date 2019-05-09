@@ -21,10 +21,12 @@ package org.apache.jackrabbit.oak.spi.blob.split;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.SeekableByteChannel;
 
 import org.apache.jackrabbit.oak.spi.blob.BlobOptions;
 import org.apache.jackrabbit.oak.spi.blob.BlobStore;
 import org.apache.jackrabbit.oak.spi.blob.BlobStoreWrapper;
+import org.apache.jackrabbit.oak.spi.blob.BlobStreamChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

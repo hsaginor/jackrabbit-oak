@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.jackrabbit.oak.commons.io;
+package org.apache.jackrabbit.oak.plugins.value.jcr;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;

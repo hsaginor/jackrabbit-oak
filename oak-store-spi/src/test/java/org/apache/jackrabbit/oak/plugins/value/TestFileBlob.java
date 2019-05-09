@@ -18,6 +18,8 @@
  */
 package org.apache.jackrabbit.oak.plugins.value;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -57,10 +59,34 @@ public class TestFileBlob implements Blob {
     @NotNull
     @Override
     public InputStream getNewStream() {
+        
+        byte[] buff = new byte[8000];
+        int bytesRead = 0;
+        
+        
+        FileInputStream fin = null;
+        ByteArrayOutputStream bao = null;
         try {
-            return new FileInputStream(getFile());
+            fin = new FileInputStream(getFile());
+            bao = new ByteArrayOutputStream();
+            
+            while((bytesRead = fin.read(buff)) != -1) {
+                bao.write(buff, 0, bytesRead);
+            }
+
+            byte[] data = bao.toByteArray();
+
+            return new ByteArrayInputStream(data);
+             
         } catch (IOException e) {
             throw new RuntimeException(e);
+        } finally {
+            if(fin != null)
+                try {
+                    fin.close();
+                    bao.close();
+                } catch (IOException e) {
+                }
         }
     }
 

@@ -28,6 +28,7 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SeekableByteChannel;
 
 import org.apache.jackrabbit.oak.api.Blob;
+import org.apache.jackrabbit.oak.commons.IOUtils;
 
 /**
  * 
@@ -36,7 +37,8 @@ import org.apache.jackrabbit.oak.api.Blob;
  */
 public class BlobStreamChannel implements SeekableByteChannel {
 
-    private boolean isOpen = true;
+    private static int MAX_READLIMIT = 1000000000;
+    
     private Blob blob;
     private long position = 0;
     private InputStream stream;
@@ -44,23 +46,42 @@ public class BlobStreamChannel implements SeekableByteChannel {
     
     public BlobStreamChannel(Blob blob) {
         this.blob = blob;
-        this.stream = new BufferedInputStream(blob.getNewStream());
-        this.stream.mark(0);
+        init();
+    }
+    
+    private synchronized void init() {
+
+        this.stream = getNewStream();
+
+        int readlimit = MAX_READLIMIT;
+        
+        long size = blob.length();
+        if (size < readlimit)
+            readlimit = (int) size + 1;
+        
+        this.stream.mark(readlimit);
+
+        ReadableByteChannel oldChannel = this.channel;
         this.channel = Channels.newChannel(stream);
+
+        // This method might be called for larger assets in position(long newPosition) if
+        // InputStream mark/reset position is invalidated.
+        // So, we might need to close the old channel.
+        if (oldChannel != null && oldChannel.isOpen()) {
+            IOUtils.closeQuietly(oldChannel);
+        }
     }
     
     @Override
     public boolean isOpen() {
-        return isOpen;
+        return channel.isOpen();
     }
 
     @Override
     public void close() throws IOException {
-        checkClosed();
-        if(channel != null) {
+        if(channel != null && !channel.isOpen()) {
             channel.close();
         }
-        isOpen = false;
     }
 
     @Override
@@ -95,20 +116,27 @@ public class BlobStreamChannel implements SeekableByteChannel {
             long bytesToSkip = newPosition - position;
             skip(bytesToSkip); 
         } else {
-            // Depending on how internal buffer is setup in BufferedInputStream it may not be able to reset to the beginning.
-            // In this case we will case current channel and create a new one to read from the blob.
+            // The reset can throw an IOException based on general contract of reset method of InputStream.
+            // In this case we close current channel and create a new one to read from the blob.
             if(!tryReset()) {
-                channel.close();
-                stream = new BufferedInputStream(blob.getNewStream());
-                channel = Channels.newChannel(stream);
+                init();
             }
-            stream.mark(0);
-            skip(newPosition);
+            
+            if(newPosition > 0) 
+                skip(newPosition);
         }
         
         position = newPosition;
         
         return this;
+    }
+    
+    private InputStream getNewStream() {
+        InputStream stream = blob.getNewStream();
+        if(!stream.markSupported()) {
+            stream = new BufferedInputStream(stream); 
+        }
+        return stream;
     }
     
     /**
@@ -143,9 +171,8 @@ public class BlobStreamChannel implements SeekableByteChannel {
     }
     
     private boolean tryReset() {
-        BufferedInputStream bin = (BufferedInputStream) stream;
         try {
-            bin.reset();
+            stream.reset();
         } catch (IOException e) {
             return false;
         }

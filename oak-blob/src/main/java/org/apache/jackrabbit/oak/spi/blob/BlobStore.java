@@ -18,6 +18,7 @@ package org.apache.jackrabbit.oak.spi.blob;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.SeekableByteChannel;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -78,7 +79,7 @@ public interface BlobStore {
      * @return a new stream for given blobId
      */
     InputStream getInputStream(String blobId) throws IOException;
-
+    
     /**
      * Returns the blobId that referred by the given binary reference.
      * Returns {@code null} if the reference is invalid, for example if it

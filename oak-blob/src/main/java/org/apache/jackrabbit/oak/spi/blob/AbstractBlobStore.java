@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.ref.WeakReference;
+import java.nio.channels.SeekableByteChannel;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -227,7 +228,7 @@ public abstract class AbstractBlobStore implements GarbageCollectableBlobStore,
         //Marking would handled by next call to store.readBlob
         return new BlobStoreInputStream(this, blobId, 0);
     }
-
+    
     //--------------------------------------------< Blob Reference >
 
     @Override
