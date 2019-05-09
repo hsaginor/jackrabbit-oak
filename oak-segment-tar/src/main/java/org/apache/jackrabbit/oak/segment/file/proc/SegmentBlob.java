@@ -26,7 +26,7 @@ import java.nio.channels.SeekableByteChannel;
 
 import org.apache.jackrabbit.oak.api.Blob;
 import org.apache.jackrabbit.oak.plugins.value.BlobFileChannel;
-import org.apache.jackrabbit.oak.plugins.value.BlobStreamChannel;
+import org.apache.jackrabbit.oak.plugins.value.BlobByteChannel;
 import org.apache.jackrabbit.oak.segment.file.proc.Proc.Backend;
 import org.apache.jackrabbit.oak.segment.file.proc.Proc.Backend.Segment;
 import org.jetbrains.annotations.NotNull;
@@ -72,7 +72,7 @@ class SegmentBlob implements Blob {
 
     @Override
     public SeekableByteChannel createChannel() {
-        return new BlobStreamChannel(this);
+        return new BlobByteChannel(this);
     }
 
     @Override

@@ -35,7 +35,7 @@ import org.apache.jackrabbit.oak.commons.IOUtils;
  * SeekableByteChannel implementation for Blob access.
  *
  */
-public class BlobStreamChannel implements SeekableByteChannel {
+public class BlobByteChannel implements SeekableByteChannel {
 
     private static int MAX_READLIMIT = 1000000000;
     
@@ -44,7 +44,7 @@ public class BlobStreamChannel implements SeekableByteChannel {
     private InputStream stream;
     private ReadableByteChannel channel;
     
-    public BlobStreamChannel(Blob blob) {
+    public BlobByteChannel(Blob blob) {
         this.blob = blob;
         init();
     }

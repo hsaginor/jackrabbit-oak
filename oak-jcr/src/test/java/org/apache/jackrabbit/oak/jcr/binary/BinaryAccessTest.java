@@ -62,7 +62,7 @@ import org.apache.jackrabbit.oak.jcr.binary.fixtures.nodestore.SegmentMemoryNode
 import org.apache.jackrabbit.oak.jcr.binary.util.BinaryAccessTestUtils;
 import org.apache.jackrabbit.oak.jcr.binary.util.Content;
 import org.apache.jackrabbit.oak.plugins.value.BlobFileChannel;
-import org.apache.jackrabbit.oak.plugins.value.BlobStreamChannel;
+import org.apache.jackrabbit.oak.plugins.value.BlobByteChannel;
 import org.apache.jackrabbit.oak.spi.state.NodeStore;
 import org.apache.jackrabbit.test.LogPrintWriter;
 import org.apache.jackrabbit.test.api.observation.EventResult;
@@ -197,7 +197,7 @@ public class BinaryAccessTest extends AbstractRepositoryTest {
 
                 @Override
                 public SeekableByteChannel createChannel() {
-                    return new BlobStreamChannel(this);
+                    return new BlobByteChannel(this);
                 }
 
                 @Override

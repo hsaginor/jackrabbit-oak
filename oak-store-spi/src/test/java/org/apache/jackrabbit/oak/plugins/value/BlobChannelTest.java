@@ -5,6 +5,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,11 +18,17 @@ import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.Random;
 
+import org.apache.jackrabbit.oak.api.Blob;
 import org.apache.jackrabbit.oak.plugins.value.BlobReadOnlyChannelWrapper;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class BlobChannelTest {
 
@@ -283,6 +290,24 @@ public class BlobChannelTest {
         System.out.println();
     }
     
+    private SeekableByteChannel createTestChannel(final File blobFile) {
+        Blob blob = mockBlob(blobFile);
+        return new BlobStreamChannel(blob);
+    }
+    
+    private Blob mockBlob(final File blobFile) {
+        Blob blob = mock(Blob.class);
+        when(blob.length()).thenReturn(blobFile.length());
+        when(blob.getNewStream()).then(new Answer<InputStream>() {
+            @Override
+            public InputStream answer(InvocationOnMock invocation) throws Throwable {
+                InputStream in = new FileInputStream(blobFile);
+                return new BufferedInputStream(in);
+            }
+        });
+        return blob;
+    }
+    
     private static File geterateTestFile() throws IOException {
         File dir = new File(TEST_FILE_DIR);
         dir.mkdirs();
@@ -305,22 +330,5 @@ public class BlobChannelTest {
         
         return file;
     }
-    
-    private class WrapperChannelBlob extends TestFileBlob {
 
-        public WrapperChannelBlob(String path) {
-            super(path);
-        }
-        
-        @Override
-        public SeekableByteChannel createChannel() {
-            FileChannel channel;
-            try {
-                channel = FileChannel.open(Paths.get(path), StandardOpenOption.READ);
-                return new BlobReadOnlyChannelWrapper(channel);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
 }

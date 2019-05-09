@@ -29,7 +29,7 @@ import com.google.common.io.ByteSource;
 
 import org.apache.jackrabbit.oak.api.Blob;
 import org.apache.jackrabbit.oak.plugins.value.BlobFileChannel;
-import org.apache.jackrabbit.oak.plugins.value.BlobStreamChannel;
+import org.apache.jackrabbit.oak.plugins.value.BlobByteChannel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -42,7 +42,7 @@ public abstract class AbstractBlob implements Blob {
 
     @Override
     public SeekableByteChannel createChannel() {
-        return new BlobStreamChannel(this);
+        return new BlobByteChannel(this);
     }
 
     @Override

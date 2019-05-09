@@ -98,7 +98,7 @@ public class BinaryBasedBlob implements Blob {
     
     @Override
     public SeekableByteChannel createChannel() {
-        return new BlobStreamChannel(this);
+        return new BlobByteChannel(this);
     }
 
     @Override

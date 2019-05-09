@@ -37,7 +37,7 @@ import org.apache.jackrabbit.oak.api.blob.TempFileReferenceProvider;
 import org.apache.jackrabbit.oak.plugins.blob.BlobStoreBlob;
 import org.apache.jackrabbit.oak.plugins.memory.AbstractBlob;
 import org.apache.jackrabbit.oak.plugins.value.BlobFileChannel;
-import org.apache.jackrabbit.oak.plugins.value.BlobStreamChannel;
+import org.apache.jackrabbit.oak.plugins.value.BlobByteChannel;
 import org.apache.jackrabbit.oak.spi.blob.BlobStore;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -265,7 +265,7 @@ public class SegmentBlob extends Record implements Blob {
 
     @Override
     public SeekableByteChannel createChannel() {
-        return new BlobStreamChannel(this);
+        return new BlobByteChannel(this);
     }
 
     @Override

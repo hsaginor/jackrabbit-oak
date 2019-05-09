@@ -28,7 +28,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
 import org.apache.jackrabbit.oak.api.Blob;
-import org.apache.jackrabbit.oak.plugins.value.BlobStreamChannel;
+import org.apache.jackrabbit.oak.plugins.value.BlobByteChannel;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -88,7 +88,7 @@ public class FileBlob implements Blob {
 
     @Override
     public SeekableByteChannel createChannel() {
-        return new BlobStreamChannel(this);
+        return new BlobByteChannel(this);
     }
 
     @Override
