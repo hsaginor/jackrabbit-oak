@@ -141,6 +141,12 @@
       <artifactId>mockito-core</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <artifactId>commons-compress</artifactId>
+      <groupId>org.apache.commons</groupId>
+      <version>1.18</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
 </project>
