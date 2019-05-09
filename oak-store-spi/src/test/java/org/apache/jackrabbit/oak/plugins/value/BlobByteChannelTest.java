@@ -113,7 +113,7 @@ public class BlobByteChannelTest {
         SeekableByteChannel channel = null;
         
         try {
-            channel = testBlob.createChannel();
+            channel = createTestChannel(testFile);;
             assertFullRead(channel);   
         } finally {
             if(channel != null)
