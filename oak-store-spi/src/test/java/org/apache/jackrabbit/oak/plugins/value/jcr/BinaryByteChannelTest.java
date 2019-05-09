@@ -46,7 +46,7 @@ import static org.mockito.Mockito.when;
 
 public class BinaryByteChannelTest {
 
-    private static final String TEST_FILE_DIR = "BlobByteChannelTestFiles";
+    private static final String TEST_FILE_DIR = "BinaryByteChannelTestFiles";
     private static final String TEST_ZIP_NAME = "testzip";
     private static final long TEST_FILE_SIZE = 1000000; 
     
