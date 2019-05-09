@@ -110,7 +110,6 @@ public class BlobByteChannelTest {
     
     @Test
     public void testReadStreamChannel() throws IOException {
-        TestFileBlob testBlob = new TestFileBlob(testFile.getAbsolutePath());
         SeekableByteChannel channel = null;
         
         try {
